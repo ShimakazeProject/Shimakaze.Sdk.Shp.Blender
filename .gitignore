@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+develop-eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.env
+.env.*
+.pytest_cache/
+
+# Distribution / packaging
+*.tar.gz
+*.whl
+*.egg
+
+# Data / logs / temp files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# IDE specific
+/.idea/
+/.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.DS_Store
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+nosetests.xml
+unit.xml
+
+# Type hinting
+*.pyi
