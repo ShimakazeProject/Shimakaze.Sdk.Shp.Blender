@@ -14,7 +14,7 @@ class SHP_PG_ObjectItem(bpy.types.PropertyGroup):
 
 
 class SHP_PG_HideObject(bpy.types.PropertyGroup):
-    def init_render_settings(type: typing.Literal['Object', 'Shadow', 'Buildup', 'Preview', 'Reset'], alpha: bool, engine: typing.Literal['Cycles', 'Eevee', None]):
+    def init_render_settings(type: typing.Literal['Object', 'Shadow', 'Buildup', 'Preview', 'Reset'], engine: typing.Literal['Cycles', 'Eevee', None]):
         if engine == None:
             if bpy.context.scene.render.engine.find('CYCLES') >= 0:
                 engine = 'Cycles'
@@ -43,13 +43,6 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
             case "C&C Remastered - Infantry": suffix = "RM.INF"
             case "C&C Remastered - Effects": suffix = "RM.FX"
             case _: suffix = "RA2.INF"
-
-        if alpha:
-            bpy.context.scene.node_tree.nodes["Alpha"].check = True
-            bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-        else:
-            bpy.context.scene.node_tree.nodes["Alpha"].check = False
-            bpy.context.scene.render.image_settings.color_mode = 'RGB'
 
         for object in [
             f"Plane.holdout.{suffix}",
@@ -123,7 +116,15 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
                 bpy.data.objects[f"Sun.{suffix}"].hide_render = False
 
     def get_output(self):
-        return self.output_template.replace('{direction}', f"{self.direction}").replace('{mode}', self.mode)
+        mode = "House" if self.house_mode else self.mode
+        path = self.output_template.replace(
+            '{direction}', f"{self.direction}").replace('{mode}', mode)
+        return path
+
+    def update_output(self, context: bpy.types.Context):
+        path = self.get_output()
+        if context.scene.render.filepath != path:
+            context.scene.render.filepath = path
 
     def on_directions_changed(self, context: bpy.types.Context):
         self.on_direction_changed(context)
@@ -147,12 +148,14 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
         else:
             signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
 
-        return signs[self.direction]
+        return signs[self.direction % len(signs)]
 
     def on_direction_changed(self, context: bpy.types.Context):
         for item in self.objects:
             item: SHP_PG_ObjectItem
             item.object.rotation_euler[2] = math.radians(self.angle + 225)
+
+        self.update_output(context)
 
         # 这里可以安全地进行视图刷新或数据更新
         for area in bpy.context.screen.areas:
@@ -178,6 +181,7 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
         return materials
 
     def on_house_mode_changed(self, context: bpy.types.Context):
+        self.update_output(context)
         for material in self.get_materials():
             skip = False
             for item in self.house_materials:
@@ -202,7 +206,14 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
             house_group_node.inputs['Factor'].default_value = 1 if self.house_mode else 0
 
     def on_render_settings_changed(self, context: bpy.types.Context):
-        self.init_render_settings(self.mode, self.use_alpha)
+        if self.use_alpha:
+            bpy.context.scene.node_tree.nodes["Alpha"].check = True
+            bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+        else:
+            bpy.context.scene.node_tree.nodes["Alpha"].check = False
+            bpy.context.scene.render.image_settings.color_mode = 'RGB'
+        self.init_render_settings(self.mode)
+        self.update_output(context)
 
     enabled: bpy.props.BoolProperty(name='enabled')
 

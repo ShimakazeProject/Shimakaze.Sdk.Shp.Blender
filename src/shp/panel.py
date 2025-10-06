@@ -28,8 +28,9 @@ class SHP_PL_WindowManager(bpy.types.Panel):
 
         col = layout.column(align=True)
         col.prop(settings, 'mode')
-        col.prop(settings, 'house_mode')
-        col.prop(settings, 'use_alpha')
+        row = col.row(align=True)
+        row.prop(settings, 'use_alpha')
+        row.prop(settings, 'house_mode')
 
         col = layout.column(align=True)
         row = col.row(align=True)
