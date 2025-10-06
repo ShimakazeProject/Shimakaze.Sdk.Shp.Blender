@@ -1,6 +1,102 @@
 import bpy
 
-from ... import property
+from .props import SHP_PG_HideObject
+from .props import SHP_PG_ObjectItem
+from .props import SHP_PG_MaterialItem
+
+
+class SHP_OT_Object_Add(bpy.types.Operator):
+    bl_idname = 'shp.object_add'
+    bl_label = '添加对象'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        settings: SHP_PG_HideObject = context.window_manager.shp
+
+        if not settings.enabled:
+            return {'CANCELLED'}
+
+        if len(context.selected_objects) < 1:
+            return {'CANCELLED'}
+
+        for object in context.selected_objects:
+            exists = False
+            for item in settings.objects:
+                if item.object == object:
+                    exists = True
+
+            if exists:
+                continue
+
+            slot: SHP_PG_ObjectItem = settings.objects.add()
+            slot.object = object
+            settings.active_object_index += 1
+
+        return {'FINISHED'}
+
+
+class SHP_OT_Object_Remove(bpy.types.Operator):
+    bl_idname = 'shp.object_remove'
+    bl_label = '移除对象'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        settings: SHP_PG_HideObject = context.window_manager.shp
+
+        if not settings.enabled:
+            return {'CANCELLED'}
+
+        settings.objects.remove(settings.active_object_index)
+        settings.active_object_index = max(
+            0, settings.active_object_index - 1)
+
+        return {'FINISHED'}
+
+
+class SHP_OT_HouseMaterial_Add(bpy.types.Operator):
+    bl_idname = 'shp.house_material_add'
+    bl_label = '添加所属色材质'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        settings: SHP_PG_HideObject = context.window_manager.shp
+
+        if not settings.enabled:
+            return {'CANCELLED'}
+
+        mat = context.active_object.active_material
+        if not mat:
+            return {'CANCELLED'}
+
+        # TODO: 优化逻辑
+        for item in settings.house_materials:
+            if item.material == mat:
+                return {'CANCELLED'}
+
+        slot: SHP_PG_MaterialItem = settings.house_materials.add()
+        slot.material = mat
+        settings.active_house_material_index += 1
+
+        return {'FINISHED'}
+
+
+class SHP_OT_HouseMaterial_Remove(bpy.types.Operator):
+    bl_idname = 'shp.house_material_remove'
+    bl_label = '移除所属色材质'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        settings: SHP_PG_HideObject = context.window_manager.shp
+
+        if not settings.enabled:
+            return {'CANCELLED'}
+
+        settings.house_materials.remove(settings.active_house_material_index)
+        settings.active_house_material_index = max(
+            0, settings.active_house_material_index - 1)
+
+        return {'FINISHED'}
+
 
 class SHP_OT_HouseMaterial_NodeGroup_Apply(bpy.types.Operator):
     bl_idname = 'shp.house_material_node_group_apply'
@@ -8,20 +104,18 @@ class SHP_OT_HouseMaterial_NodeGroup_Apply(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
+        settings: SHP_PG_HideObject = context.window_manager.shp
+
+        if not settings.enabled:
+            return {'CANCELLED'}
+
         self.reset_node_group(context)
-        self.apply_node_group_to_materials(context)
+        self.apply_node_group_to_materials(settings)
 
         return {'FINISHED'}
 
-    def apply_node_group_to_materials(self, context: bpy.types.Context):
-        scene: property.SHP_PG_Scene = context.scene.shp
-        if not scene.target:
-            return {'CANCELLED'}
-        
-        object: property.SHP_PG_Object = scene.target.shp
-
-        materials = object.get_materials()
-        for mat in materials:
+    def apply_node_group_to_materials(self, settings: SHP_PG_HideObject):
+        for mat in settings.get_materials():
             # 获取材质的节点树
             nodes = mat.node_tree.nodes
             links = mat.node_tree.links
