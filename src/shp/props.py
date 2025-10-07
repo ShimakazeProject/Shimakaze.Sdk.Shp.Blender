@@ -115,72 +115,18 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
                 bpy.data.objects[f"Plane.grey.{suffix}"].hide_render = False
                 bpy.data.objects[f"Sun.{suffix}"].hide_render = False
 
-    def get_output(self):
-        mode = "House" if self.house_mode else self.mode
-        path = self.output_template.replace(
-            '{direction}', f"{self.direction}").replace('{mode}', mode)
-        return path
-
     def update_output(self, context: bpy.types.Context):
-        path = self.get_output()
-        if context.scene.render.filepath != path:
-            context.scene.render.filepath = path
-
-    def on_directions_changed(self, context: bpy.types.Context):
-        self.on_direction_changed(context)
-
-    def get_direction_count(self):
-        return max(self.directions * 8, 1)
-
-    def get_angle_per_direction(self):
-        return 360 / max(self.direction_count, 8)
-
-    def get_angle(self):
-        return self.direction * self.angle_per_direction
-
-    def get_angle_text(self):
-        if self.direction_count > 16:
+        if context.scene.render.filepath == self.output:
             return
+        context.scene.render.filepath = self.output
 
-        if self.direction_count == 16:
-            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
-                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
-        else:
-            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
-
-        return signs[self.direction % len(signs)]
-
-    def on_direction_changed(self, context: bpy.types.Context):
-        for item in self.objects:
-            item: SHP_PG_ObjectItem
-            item.object.rotation_euler[2] = math.radians(self.angle + 225)
-
+    def update_render_type(self, context: bpy.types.Context):
         self.update_output(context)
+        bpy.context.scene.node_tree.nodes["Alpha"].check = self.use_alpha
+        bpy.context.scene.render.image_settings.color_mode = 'RGBA' if self.use_alpha else 'RGB'
+        self.init_render_settings(self.mode)
 
-        # 这里可以安全地进行视图刷新或数据更新
-        for area in bpy.context.screen.areas:
-            if area.type == 'VIEW_3D':
-                area.tag_redraw()
-
-    def get_materials(self):
-        list: typing.List[bpy.types.Object] = []
-        for item in self.objects:
-            obj: bpy.types.Object = item.object
-            list.append(obj)
-            for child in obj.children_recursive:
-                list.append(child)
-
-        materials: typing.List[bpy.types.Material] = []
-        for item in list:
-            for slot in item.material_slots:
-                mat = slot.material
-                if not mat or not mat.use_nodes:
-                    continue
-                materials.append(mat)
-
-        return materials
-
-    def on_house_mode_changed(self, context: bpy.types.Context):
+    def update_house_mode(self, context: bpy.types.Context):
         self.update_output(context)
         for material in self.get_materials():
             skip = False
@@ -205,29 +151,80 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
             # 设置默认值
             house_group_node.inputs['Factor'].default_value = 1 if self.house_mode else 0
 
-    def on_render_settings_changed(self, context: bpy.types.Context):
-        if self.use_alpha:
-            bpy.context.scene.node_tree.nodes["Alpha"].check = True
-            bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-        else:
-            bpy.context.scene.node_tree.nodes["Alpha"].check = False
-            bpy.context.scene.render.image_settings.color_mode = 'RGB'
-        self.init_render_settings(self.mode)
+    def update_direction(self, context: bpy.types.Context):
         self.update_output(context)
+        for item in self.objects:
+            item: SHP_PG_ObjectItem
+            item.object.rotation_euler[2] = math.radians(self.angle + 225)
 
-    enabled: bpy.props.BoolProperty(name='enabled')
+        # 这里可以安全地进行视图刷新或数据更新
+        for area in bpy.context.screen.areas:
+            if area.type == 'VIEW_3D':
+                area.tag_redraw()
+
+    def get_output(self):
+        mode = "House" if self.house_mode else self.mode
+        path = self.output_template.replace(
+            '{direction}', f"{self.direction}").replace('{mode}', mode)
+        return path
+
+    def get_direction_count(self):
+        return max(self.directions * 8, 1)
+
+    def get_angle_per_direction(self):
+        tmp = 360 / max(self.direction_count, 8)
+        return -tmp if self.reverse else tmp
+
+    def get_angle(self):
+        return self.direction * self.angle_per_direction
+
+    def get_angle_text(self):
+        if self.direction_count > 16:
+            return
+
+        if self.direction_count == 16:
+            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
+                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
+        else:
+            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
+
+        index = self.direction % len(signs)
+        if self.reverse and input != 0:
+            index = len(signs) - index
+
+        return signs[index]
+
+    def get_materials(self):
+        list: typing.List[bpy.types.Object] = []
+        for item in self.objects:
+            obj: bpy.types.Object = item.object
+            list.append(obj)
+            for child in obj.children_recursive:
+                list.append(child)
+
+        materials: typing.List[bpy.types.Material] = []
+        for item in list:
+            for slot in item.material_slots:
+                mat = slot.material
+                if not mat or not mat.use_nodes:
+                    continue
+                materials.append(mat)
+
+        return materials
+
+    enabled: bpy.props.BoolProperty(name='Enable')
 
     use_alpha: bpy.props.BoolProperty(
-        name='Alpha', update=on_render_settings_changed)
+        name='Alpha', update=update_render_type)
     house_mode: bpy.props.BoolProperty(
-        name='所属色模式', update=on_house_mode_changed)
+        name='所属色模式', update=update_house_mode)
     mode: bpy.props.EnumProperty(name='Mode', items=[
         ('Object', '对象', '渲染对象'),
         ('Shadow', '影子', '渲染影子'),
         ('Buildup', 'Buildup', 'Buildup'),
         ('Preview', 'Preview', 'Preview'),
         ('Reset', 'Reset', 'Reset'),
-    ], update=on_render_settings_changed)
+    ], update=update_render_type)
 
     output_template: bpy.props.StringProperty(
         name='输出模板', default='//{direction}/{mode}_')
@@ -243,12 +240,15 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
     active_object_index: bpy.props.IntProperty(
         name='当前选中的对象')
 
+    reverse: bpy.props.BoolProperty(
+        name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
     directions: bpy.props.IntProperty(
-        name='方向数/8', min=0, default=1, update=on_directions_changed)
+        name='方向数/8', min=0, default=1, update=update_direction)
+    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
+
     direction_count: bpy.props.IntProperty(
         name='方向数量', get=get_direction_count)
     angle_per_direction: bpy.props.FloatProperty(
         name='每方向角度', get=get_angle_per_direction)
-    direction: bpy.props.IntProperty(name='物体方向', update=on_direction_changed)
     angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
     angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)

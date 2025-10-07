@@ -33,6 +33,7 @@ class SHP_PL_WindowManager(bpy.types.Panel):
         row.prop(settings, 'house_mode')
 
         col = layout.column(align=True)
+        col.prop(settings, 'reverse')
         row = col.row(align=True)
         row.prop(settings, 'directions')
         row.prop(settings, 'direction')
