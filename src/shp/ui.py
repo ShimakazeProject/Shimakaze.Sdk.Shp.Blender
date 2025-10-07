@@ -1,5 +1,6 @@
 import bpy
 
+from .props import SHP_PG_MarkerItem
 
 class SHP_UL_material_list(bpy.types.UIList):
 
@@ -40,16 +41,11 @@ class SHP_UL_object_list(bpy.types.UIList):
 class SHP_UL_marker_list(bpy.types.UIList):
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        item: bpy.types.TimelineMarker
+        item: SHP_PG_MarkerItem
         # draw_item must handle the three layout types... Usually 'DEFAULT' and 'COMPACT' can share the same code.
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             if item:
-                end = item
-                for i in data.timeline_markers:
-                    if i.name == f"{item.name}_End":
-                        end = i
-
-                frameRange = f"{item.frame}" if item.frame == end.frame else f"{item.frame}-{end.frame}"
+                frameRange = f"{item.start}" if item.start == item.end else f"{item.start}-{item.end}"
 
                 row = layout.row()
                 row.prop(item, 'name', text='', emboss=False,

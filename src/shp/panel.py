@@ -95,8 +95,20 @@ class SHP_PL_Action(bpy.types.Panel):
         row = layout.row(align=True)
         row.template_list(
             'SHP_UL_marker_list', '',
-            context.scene, 'timeline_markers',
+            settings, 'markers',
             settings, 'active_marker_index')
+        col = row.column(align=True)
+        col.operator('shp.marker_init', icon='FILE_REFRESH', text='')
+        col.operator('shp.marker_add', icon='ADD', text='')
+        col.operator('shp.marker_remove', icon='REMOVE', text='')
+
+        data = settings.get_current_marker()
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.prop(data, 'name_buf')
+        row = col.row(align=True)
+        row.prop(data, 'start')
+        row.prop(data, 'end')
 
     def draw_header(self, context):
         layout = self.layout

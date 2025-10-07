@@ -14,7 +14,97 @@ class SHP_PG_ObjectItem(bpy.types.PropertyGroup):
         name='Object', type=bpy.types.Object)
 
 
+class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty(name='Name')
+    name_buf: bpy.props.StringProperty(
+        name='Name', update=update_name)
+    end_name: bpy.props.StringProperty(get=get_end_name)
+    start: bpy.props.IntProperty(name="Start", update=update_start)
+    end: bpy.props.IntProperty(name="End", update=update_end)
+
+    def get_end_name(self):
+        return self.end_name
+
+    def update_name(self, context: bpy.types.Context):
+        old_name = self.name
+        new_name = self.name_buf
+        marker = context.scene.timeline_markers.get(old_name)
+        if marker:
+            marker.name = new_name
+        else:
+            context.scene.timeline_markers.new(self.name, frame=self.start)
+
+        marker = context.scene.timeline_markers.get(self.end_name)
+        if marker:
+            marker.name = f"{new_name}_End"
+        else:
+            context.scene.timeline_markers.new(
+                self.end_name, frame=self.end)
+        self.name = new_name
+
+    def update_start(self, context: bpy.types.Context):
+        value = self.start
+        marker = context.scene.timeline_markers.get(self.name)
+        if marker:
+            marker.frame = value
+        else:
+            context.scene.timeline_markers.new(self.name, frame=value)
+
+    def update_end(self, context: bpy.types.Context):
+        value = self.end
+        marker = context.scene.timeline_markers.get(self.end_name)
+        if marker:
+            marker.frame = value
+        else:
+            context.scene.timeline_markers.new(self.end_name, frame=value)
+
+
 class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
+    use_alpha: bpy.props.BoolProperty(
+        name='Alpha', update=update_render_type)
+    house_mode: bpy.props.BoolProperty(
+        name='所属色模式', update=update_house_mode)
+    mode: bpy.props.EnumProperty(name='Mode', items=[
+        ('Object', '对象', '渲染对象'),
+        ('Shadow', '影子', '渲染影子'),
+        ('Buildup', 'Buildup', 'Buildup'),
+        ('Preview', 'Preview', 'Preview'),
+        ('Reset', 'Reset', 'Reset'),
+    ], update=update_render_type)
+
+    output_template: bpy.props.StringProperty(
+        name='输出模板', default='//{direction}/{mode}_', update=update_output)
+    output: bpy.props.StringProperty(name='Output Path', get=get_output)
+
+    house_materials: bpy.props.CollectionProperty(
+        name='所属色材质', type=SHP_PG_MaterialItem)
+    active_house_material_index: bpy.props.IntProperty(
+        name='当前选中的所属色材质')
+
+    objects: bpy.props.CollectionProperty(
+        name='对象', type=SHP_PG_ObjectItem)
+    active_object_index: bpy.props.IntProperty(
+        name='当前选中的对象')
+
+    markers: bpy.props.CollectionProperty(
+        name='Marker', type=SHP_PG_MarkerItem)
+    active_marker_index: bpy.props.IntProperty(
+        name='Current Marker', update=update_timeline)
+
+    reverse: bpy.props.BoolProperty(
+        name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
+    directions: bpy.props.IntProperty(
+        name='方向数/8', min=0, default=1, update=update_direction)
+
+    direction_count: bpy.props.IntProperty(
+        name='方向数量', get=get_direction_count)
+    angle_per_direction: bpy.props.FloatProperty(
+        name='每方向角度', get=get_angle_per_direction)
+    
+    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
+    angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
+    angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
+
     @staticmethod
     def get_instance() -> typing.Union[SHP_PG_RenderSettings | None]:
         index = bpy.data.texts.find("Shimakaze.Sdk.RenderSettings")
@@ -174,8 +264,11 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
 
     def get_output(self):
         mode = "House" if self.house_mode else self.mode
-        path = self.output_template.replace(
-            '{direction}', f"{self.direction}").replace('{mode}', mode)
+        path = self.output_template \
+            .replace('{direction}', f"{self.direction}") \
+            .replace('{direction_text}', f"{self.angle_text}") \
+            .replace('{action}', f"{self.get_current_marker().name}") \
+            .replace('{mode}', mode)
         return path
 
     def get_direction_count(self):
@@ -222,43 +315,209 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
 
         return materials
 
-    use_alpha: bpy.props.BoolProperty(
-        name='Alpha', update=update_render_type)
-    house_mode: bpy.props.BoolProperty(
-        name='所属色模式', update=update_house_mode)
-    mode: bpy.props.EnumProperty(name='Mode', items=[
-        ('Object', '对象', '渲染对象'),
-        ('Shadow', '影子', '渲染影子'),
-        ('Buildup', 'Buildup', 'Buildup'),
-        ('Preview', 'Preview', 'Preview'),
-        ('Reset', 'Reset', 'Reset'),
-    ], update=update_render_type)
+    def add_objects(self, context: bpy.types.Context):
+        if len(context.selected_objects) < 1:
+            return False
 
-    output_template: bpy.props.StringProperty(
-        name='输出模板', default='//{direction}/{mode}_', update=update_output)
-    output: bpy.props.StringProperty(name='Output Path', get=get_output)
+        for object in context.selected_objects:
+            exists = False
+            for item in self.objects:
+                if item.object == object:
+                    exists = True
 
-    house_materials: bpy.props.CollectionProperty(
-        name='所属色材质', type=SHP_PG_MaterialItem)
-    active_house_material_index: bpy.props.IntProperty(
-        name='当前选中的所属色材质')
+            if exists:
+                continue
 
-    objects: bpy.props.CollectionProperty(
-        name='对象', type=SHP_PG_ObjectItem)
-    active_object_index: bpy.props.IntProperty(
-        name='当前选中的对象')
+            slot: SHP_PG_ObjectItem = self.objects.add()
+            slot.object = object
+            self.active_object_index += 1
 
-    active_marker_index: bpy.props.IntProperty(name='Current Marker')
+        return True
 
-    reverse: bpy.props.BoolProperty(
-        name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
-    directions: bpy.props.IntProperty(
-        name='方向数/8', min=0, default=1, update=update_direction)
-    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
+    def remote_object(self, context: bpy.types.Context):
+        if self.active_object_index < 0 or self.active_object_index >= len(self.objects):
+            return False
 
-    direction_count: bpy.props.IntProperty(
-        name='方向数量', get=get_direction_count)
-    angle_per_direction: bpy.props.FloatProperty(
-        name='每方向角度', get=get_angle_per_direction)
-    angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
-    angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
+        self.objects.remove(self.active_object_index)
+        self.active_object_index = max(
+            0, self.active_object_index - 1)
+
+        return True
+
+    def add_material(self, context: bpy.types.Context):
+        mat = context.active_object.active_material
+        if not mat:
+            return False
+
+        for item in self.house_materials:
+            if item.material == mat:
+                return False
+
+        slot: SHP_PG_MaterialItem = self.house_materials.add()
+        slot.material = mat
+        self.active_house_material_index += 1
+
+        return True
+
+    def remote_material(self, context: bpy.types.Context):
+        if self.active_house_material_index < 0 or self.active_house_material_index >= len(self.house_materials):
+            return False
+
+        self.house_materials.remove(self.active_house_material_index)
+        self.active_house_material_index = max(
+            0, self.active_house_material_index - 1)
+
+        return True
+
+    def init_materials(self, context: bpy.types.Context):
+        group_name = 'HouseNodeGroup'
+
+        # 获取或创建节点组
+        node_group = context.blend_data.node_groups.get(group_name)
+        if not node_group:
+            node_group = context.blend_data.node_groups.new(
+                name=group_name, type='ShaderNodeTree')
+
+        # 清空旧节点，确保是干净的节点组
+        node_group.nodes.clear()
+        node_group.links.clear()
+        for item in list(node_group.interface.items_tree):
+            if (item.item_type == 'SOCKET'):
+                node_group.interface.remove(item)
+
+        # 创建输入/输出节点
+        group_in: bpy.types.NodeGroupInput = node_group.nodes.new(
+            'NodeGroupInput')
+        group_in.location = (-400, 0)
+        group_out: bpy.types.NodeGroupOutput = node_group.nodes.new(
+            'NodeGroupOutput')
+        group_out.location = (400, 0)
+
+        node_group.interface.new_socket(
+            name='Factor', socket_type='NodeSocketFloat', in_out='INPUT')
+        node_group.interface.new_socket(
+            name='Shader', socket_type='NodeSocketShader', in_out='INPUT')
+        node_group.interface.new_socket(
+            name='Alpha', socket_type='NodeSocketFloat', in_out='INPUT')
+        node_group.interface.new_socket(
+            name='Shader', socket_type='NodeSocketShader', in_out='OUTPUT')
+
+        mix = node_group.nodes.new('ShaderNodeMixShader')
+        mix.location = (200, 0)
+
+        mix2 = node_group.nodes.new('ShaderNodeMixShader')
+        mix2.location = (0, -100)
+        transparent = node_group.nodes.new('ShaderNodeBsdfTransparent')
+        transparent.location = (-200, -100)
+        holdout = node_group.nodes.new('ShaderNodeHoldout')
+        holdout.location = (-200, -200)
+
+        node_group.links.new(group_in.outputs[0], mix.inputs[0])
+        node_group.links.new(group_in.outputs[1], mix.inputs[1])
+        node_group.links.new(group_in.outputs[2], mix2.inputs[0])
+
+        node_group.links.new(mix.outputs[0], group_out.inputs[0])
+
+        node_group.links.new(transparent.outputs[0], mix2.inputs[1])
+        node_group.links.new(holdout.outputs[0], mix2.inputs[2])
+        node_group.links.new(mix2.outputs[0], mix.inputs[2])
+
+        for mat in self.get_materials():
+            # 获取材质的节点树
+            nodes = mat.node_tree.nodes
+            links = mat.node_tree.links
+
+            # 查找输出节点
+            output_node = None
+            for node in nodes:
+                if node.type == 'OUTPUT_MATERIAL':
+                    output_node = node
+                    break
+
+            if not output_node:
+                print(f'材质 {mat.name} 没有找到输出节点')
+                continue
+
+            # 创建或获取 HouseNodeGroup
+            group_name = 'HouseNodeGroup'
+            node_group = bpy.data.node_groups.get(group_name)
+            if not node_group:
+                print(f'找不到节点组 {group_name}')
+                continue
+
+            # 添加 HouseNodeGroup 实例到材质节点树
+            house_group_node = nodes.new(type='ShaderNodeGroup')
+            house_group_node.name = group_name
+            house_group_node.label = group_name
+            house_group_node.node_tree = node_group
+            house_group_node.location = (
+                output_node.location.x - 150, output_node.location.y)
+
+            # 设置默认值（可选）
+            house_group_node.inputs['Factor'].default_value = 0
+            house_group_node.inputs['Alpha'].default_value = 1
+
+            # 断开原有与输出节点的链接
+            for link in output_node.inputs['Surface'].links:
+                link: bpy.types.NodeLink
+                from_socket = link.from_socket
+                from_node = link.from_node
+                links.remove(link)
+
+            # 连接 HouseNodeGroup 到输出节点
+            links.new(
+                house_group_node.outputs['Shader'], output_node.inputs['Surface'])
+            links.new(from_socket, house_group_node.inputs['Shader'])
+            iAlpha = from_node.outputs.find('Alpha')
+            if iAlpha >= 0:
+                links.new(from_node.outputs[iAlpha],
+                          house_group_node.inputs['Alpha'])
+
+    def init_markers(self, context: bpy.types.Context):
+        # 明确类型
+        frame_map: typing.Dict[str,  typing.Tuple[int, int]] = {}
+
+        for marker in context.scene.timeline_markers:
+            name = marker.name
+            if name.endswith('_End'):
+                base_name = name[:-4]
+                start, end = frame_map.get(
+                    base_name, (marker.frame, marker.frame))
+                frame_map[base_name] = (start, marker.frame)  # 只更新 end
+            else:
+                base_name = name
+                start, end = frame_map.get(
+                    base_name, (marker.frame, marker.frame))
+                frame_map[base_name] = (marker.frame, end)  # 只更新 start
+
+        self.markers.clear()
+        for item in frame_map:
+            slot: SHP_PG_MarkerItem = self.markers.add()
+            slot.name = item
+            slot.name_buf = item
+            (slot.start, slot.end) = frame_map.get(item)
+
+        return True
+
+    def add_marker(self, context: bpy.types.Context):
+        self.markers.add()
+        return True
+
+    def remove_marker(self, context: bpy.types.Context):
+        if self.active_marker_index < 0 or self.active_marker_index >= len(self.markers):
+            return False
+
+        self.markers.remove(self.active_marker_index)
+        self.active_marker_index = max(
+            0, self.active_marker_index - 1)
+
+        return True
+
+    def get_current_marker(self):
+        item: SHP_PG_MarkerItem = self.markers[self.active_marker_index]
+        return item
+
+    def update_timeline(self, context: bpy.types.Context):
+        item = self.get_current_marker()
+        context.scene.frame_start = item.start
+        context.scene.frame_end = item.end

@@ -4,8 +4,12 @@ from .operator import SHP_OT_Object_Remove
 from .operator import SHP_OT_HouseMaterial_Add
 from .operator import SHP_OT_HouseMaterial_Remove
 from .operator import SHP_OT_HouseMaterial_NodeGroup_Apply
+from .operator import SHP_OT_Marker_Init
+from .operator import SHP_OT_Marker_Add
+from .operator import SHP_OT_Marker_Remove
 from .props import SHP_PG_MaterialItem
 from .props import SHP_PG_ObjectItem
+from .props import SHP_PG_MarkerItem
 from .props import SHP_PG_RenderSettings
 from .panel import SHP_PL_GlobalSettings
 from .panel import SHP_PL_Object
@@ -18,6 +22,7 @@ from .ui import SHP_UL_marker_list
 properties = [
     SHP_PG_MaterialItem,
     SHP_PG_ObjectItem,
+    SHP_PG_MarkerItem,
     SHP_PG_RenderSettings,
 ]
 
@@ -30,6 +35,9 @@ classes = [
     SHP_OT_HouseMaterial_Add,
     SHP_OT_HouseMaterial_Remove,
     SHP_OT_HouseMaterial_NodeGroup_Apply,
+    SHP_OT_Marker_Init,
+    SHP_OT_Marker_Add,
+    SHP_OT_Marker_Remove,
     SHP_PL_GlobalSettings,
     SHP_PL_Object,
     SHP_PL_Action,
