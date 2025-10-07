@@ -30,16 +30,11 @@ class SHP_PL_GlobalSettings(bpy.types.Panel):
         row.prop(settings, 'house_mode')
 
         col = layout.column(align=True)
-        col.prop(settings, 'reverse')
-        row = col.row(align=True)
-        row.prop(settings, 'directions')
-        row.prop(settings, 'direction')
-
+        col.prop(settings, 'directions')
         col.prop(settings, 'direction_count')
         col.prop(settings, 'angle_per_direction')
-        row = col.row(align=True).split(factor=0.9)
-        row.prop(settings, 'angle')
-        row.label(text=settings.angle_text)
+        col.prop(settings, 'reverse')
+
 
     def draw_header(self, context):
         layout = self.layout
@@ -109,6 +104,14 @@ class SHP_PL_Action(bpy.types.Panel):
         row = col.row(align=True)
         row.prop(data, 'start')
         row.prop(data, 'end')
+
+        col = layout.column(align=True)
+        col.prop(data, 'fixed_direction')
+        col = layout.column(align=True)
+        row = col.row(align=True).split(factor=0.9)
+        row.prop(data, 'direction')
+        row.label(text=data.angle_text)
+        col.prop(data, 'angle')
 
     def draw_header(self, context):
         layout = self.layout

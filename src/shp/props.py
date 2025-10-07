@@ -22,6 +22,12 @@ class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
     start: bpy.props.IntProperty(name="Start", update=update_start)
     end: bpy.props.IntProperty(name="End", update=update_end)
 
+    fixed_direction: bpy.props.BoolProperty(
+        name='仅使用同一方向', update=update_direction)
+    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
+    angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
+    angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
+
     def get_end_name(self):
         return self.end_name
 
@@ -58,6 +64,43 @@ class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
         else:
             context.scene.timeline_markers.new(self.end_name, frame=value)
 
+    def get_angle(self):
+        settings = SHP_PG_RenderSettings.get_instance()
+        return self.direction * settings.angle_per_direction
+
+    def get_angle_text(self):
+        settings = SHP_PG_RenderSettings.get_instance()
+        if settings.direction_count > 16:
+            return
+
+        if settings.direction_count == 16:
+            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
+                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
+        else:
+            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
+
+        index = self.direction % len(signs)
+        if settings.reverse and input != 0:
+            index = len(signs) - index
+
+        return signs[index]
+
+    def update_direction(self, context: bpy.types.Context):
+        settings = SHP_PG_RenderSettings.get_instance()
+        settings.update_output(context)
+
+        radians = math.radians(self.angle + 225) \
+            if self.fixed_direction \
+            else 0
+        for item in settings.objects:
+            item: SHP_PG_ObjectItem
+            item.object.rotation_euler[2] = radians
+
+        # 这里可以安全地进行视图刷新或数据更新
+        for area in context.screen.areas:
+            if area.type == 'VIEW_3D':
+                area.tag_redraw()
+
 
 class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
     use_alpha: bpy.props.BoolProperty(
@@ -73,7 +116,7 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
     ], update=update_render_type)
 
     output_template: bpy.props.StringProperty(
-        name='输出模板', default='//{direction}/{mode}_', update=update_output)
+        name='输出模板', default='//{action}/{mode}/{direction}/', update=update_output)
     output: bpy.props.StringProperty(name='Output Path', get=get_output)
 
     house_materials: bpy.props.CollectionProperty(
@@ -100,10 +143,6 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
         name='方向数量', get=get_direction_count)
     angle_per_direction: bpy.props.FloatProperty(
         name='每方向角度', get=get_angle_per_direction)
-    
-    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
-    angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
-    angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
 
     @staticmethod
     def get_instance() -> typing.Union[SHP_PG_RenderSettings | None]:
@@ -251,17 +290,6 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
             # 设置默认值
             house_group_node.inputs['Factor'].default_value = 1 if self.house_mode else 0
 
-    def update_direction(self, context: bpy.types.Context):
-        self.update_output(context)
-        for item in self.objects:
-            item: SHP_PG_ObjectItem
-            item.object.rotation_euler[2] = math.radians(self.angle + 225)
-
-        # 这里可以安全地进行视图刷新或数据更新
-        for area in bpy.context.screen.areas:
-            if area.type == 'VIEW_3D':
-                area.tag_redraw()
-
     def get_output(self):
         mode = "House" if self.house_mode else self.mode
         path = self.output_template \
@@ -278,24 +306,10 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
         tmp = 360 / max(self.direction_count, 8)
         return -tmp if self.reverse else tmp
 
-    def get_angle(self):
-        return self.direction * self.angle_per_direction
-
-    def get_angle_text(self):
-        if self.direction_count > 16:
-            return
-
-        if self.direction_count == 16:
-            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
-                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
-        else:
-            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
-
-        index = self.direction % len(signs)
-        if self.reverse and input != 0:
-            index = len(signs) - index
-
-        return signs[index]
+    def update_direction(self, context: bpy.types.Context):
+        item = self.get_current_marker()
+        if item:
+            item.update_direction(context)
 
     def get_materials(self):
         list: typing.List[bpy.types.Object] = []
@@ -519,5 +533,10 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
 
     def update_timeline(self, context: bpy.types.Context):
         item = self.get_current_marker()
+        if not item:
+            return
+
         context.scene.frame_start = item.start
         context.scene.frame_end = item.end
+        context.scene.frame_current = item.start
+        item.update_direction(context)
