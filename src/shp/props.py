@@ -24,6 +24,8 @@ class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
 
     fixed_direction: bpy.props.BoolProperty(
         name='仅使用同一方向', update=update_direction)
+    use_direction: bpy.props.BoolProperty(
+        name='使用方向', update=update_direction)  # 给渲染使用
     direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
     angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
     angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
@@ -90,7 +92,7 @@ class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
         settings.update_output(context)
 
         radians = math.radians(self.angle + 225) \
-            if self.fixed_direction \
+            if self.fixed_direction or self.use_direction \
             else 0
         for item in settings.objects:
             item: SHP_PG_ObjectItem
@@ -100,6 +102,12 @@ class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
         for area in context.screen.areas:
             if area.type == 'VIEW_3D':
                 area.tag_redraw()
+
+    def update_timeline(self, context: bpy.types.Context):
+        context.scene.frame_start = self.start
+        context.scene.frame_end = self.end
+        context.scene.frame_current = self.start
+        self.update_direction(context)
 
 
 class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
@@ -536,7 +544,4 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
         if not item:
             return
 
-        context.scene.frame_start = item.start
-        context.scene.frame_end = item.end
-        context.scene.frame_current = item.start
-        item.update_direction(context)
+        item.update_timeline(context)
