@@ -1,9 +1,9 @@
 import bpy
 
-from .props import SHP_PG_HideObject
+from .props import SHP_PG_RenderSettings
 
 
-class SHP_PL_WindowManager(bpy.types.Panel):
+class SHP_PL_GlobalSettings(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'SHP'
@@ -12,15 +12,12 @@ class SHP_PL_WindowManager(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             row = layout.row()
-            row.prop(settings, 'enabled')
-            row.label(text='SHP 未启用')
+            row.label(text='未启用 SHP, 请检查是否使用了模板')
             return
-
-        layout.prop(settings, 'enabled')
 
         col = layout.column(align=True)
         col.prop(settings, 'output_template')
@@ -59,9 +56,9 @@ class SHP_PL_Object(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             row = layout.row()
             row.label(text='未启用 SHP, 请检查是否使用了模板')
             return
@@ -89,9 +86,9 @@ class SHP_PL_Action(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             row = layout.row()
             row.label(text='未启用 SHP, 请检查是否使用了模板')
             return
@@ -116,9 +113,9 @@ class SHP_PL_Material(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             row = layout.row()
             row.label(text='未启用 SHP, 请检查是否使用了模板')
             return

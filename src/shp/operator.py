@@ -1,6 +1,6 @@
 import bpy
 
-from .props import SHP_PG_HideObject
+from .props import SHP_PG_RenderSettings
 from .props import SHP_PG_ObjectItem
 from .props import SHP_PG_MaterialItem
 
@@ -11,9 +11,9 @@ class SHP_OT_Object_Add(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             return {'CANCELLED'}
 
         if len(context.selected_objects) < 1:
@@ -41,9 +41,9 @@ class SHP_OT_Object_Remove(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             return {'CANCELLED'}
 
         settings.objects.remove(settings.active_object_index)
@@ -59,9 +59,9 @@ class SHP_OT_HouseMaterial_Add(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             return {'CANCELLED'}
 
         mat = context.active_object.active_material
@@ -86,9 +86,9 @@ class SHP_OT_HouseMaterial_Remove(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             return {'CANCELLED'}
 
         settings.house_materials.remove(settings.active_house_material_index)
@@ -104,9 +104,9 @@ class SHP_OT_HouseMaterial_NodeGroup_Apply(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings: SHP_PG_HideObject = context.window_manager.shp
+        settings = SHP_PG_RenderSettings.get_instance()
 
-        if not settings.enabled:
+        if not settings:
             return {'CANCELLED'}
 
         self.reset_node_group(context)
@@ -114,7 +114,7 @@ class SHP_OT_HouseMaterial_NodeGroup_Apply(bpy.types.Operator):
 
         return {'FINISHED'}
 
-    def apply_node_group_to_materials(self, settings: SHP_PG_HideObject):
+    def apply_node_group_to_materials(self, settings: SHP_PG_RenderSettings):
         for mat in settings.get_materials():
             # 获取材质的节点树
             nodes = mat.node_tree.nodes

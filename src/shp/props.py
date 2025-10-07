@@ -1,3 +1,4 @@
+from __future__ import annotations
 import math
 import typing
 import bpy
@@ -13,7 +14,16 @@ class SHP_PG_ObjectItem(bpy.types.PropertyGroup):
         name='Object', type=bpy.types.Object)
 
 
-class SHP_PG_HideObject(bpy.types.PropertyGroup):
+class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
+    @staticmethod
+    def get_instance() -> typing.Union[SHP_PG_RenderSettings | None]:
+        index = bpy.data.texts.find("Shimakaze.Sdk.RenderSettings")
+        if index < 0:
+            return None
+
+        shp: SHP_PG_RenderSettings = bpy.data.texts[index].shp
+        return shp
+
     def init_render_settings(type: typing.Literal['Object', 'Shadow', 'Buildup', 'Preview', 'Reset'], engine: typing.Literal['Cycles', 'Eevee', None]):
         if engine == None:
             if bpy.context.scene.render.engine.find('CYCLES') >= 0:
@@ -211,8 +221,6 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
                 materials.append(mat)
 
         return materials
-
-    enabled: bpy.props.BoolProperty(name='Enable')
 
     use_alpha: bpy.props.BoolProperty(
         name='Alpha', update=update_render_type)
