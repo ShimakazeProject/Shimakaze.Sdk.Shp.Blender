@@ -54,7 +54,7 @@ class SHP_PL_Object(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = 'SHP'
     bl_label = 'Shp 对象'
-    bl_idname = 'SHP_PT_action'
+    bl_idname = 'SHP_PT_object'
     bl_order = 1
 
     def draw(self, context):
@@ -73,6 +73,33 @@ class SHP_PL_Object(bpy.types.Panel):
         col = row.column(align=True)
         col.operator('shp.object_add', icon='ADD', text='')
         col.operator('shp.object_remove', icon='REMOVE', text='')
+
+    def draw_header(self, context):
+        layout = self.layout
+        layout.label(icon='OBJECT_DATA', text="")
+
+
+class SHP_PL_Action(bpy.types.Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'SHP'
+    bl_label = 'Shp Action'
+    bl_idname = 'SHP_PT_action'
+    bl_order = 1
+
+    def draw(self, context):
+        layout = self.layout
+        settings: SHP_PG_HideObject = context.window_manager.shp
+
+        if not settings.enabled:
+            row = layout.row()
+            row.label(text='未启用 SHP, 请检查是否使用了模板')
+            return
+        row = layout.row(align=True)
+        row.template_list(
+            'SHP_UL_marker_list', '',
+            context.scene, 'timeline_markers',
+            settings, 'active_marker_index')
 
     def draw_header(self, context):
         layout = self.layout

@@ -227,7 +227,7 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
     ], update=update_render_type)
 
     output_template: bpy.props.StringProperty(
-        name='输出模板', default='//{direction}/{mode}_')
+        name='输出模板', default='//{direction}/{mode}_', update=update_output)
     output: bpy.props.StringProperty(name='Output Path', get=get_output)
 
     house_materials: bpy.props.CollectionProperty(
@@ -239,6 +239,8 @@ class SHP_PG_HideObject(bpy.types.PropertyGroup):
         name='对象', type=SHP_PG_ObjectItem)
     active_object_index: bpy.props.IntProperty(
         name='当前选中的对象')
+
+    active_marker_index: bpy.props.IntProperty(name='Current Marker')
 
     reverse: bpy.props.BoolProperty(
         name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
