@@ -1,61 +1,41 @@
 import bpy
 
-from .props import SHP_PG_MaterialItem
-from .props import SHP_PG_MarkerItem
+from .settings import SHP_PG_GlobalSettings
 
-class SHP_UL_material_list(bpy.types.UIList):
+class SHP_PT_GlobalSettings(bpy.types.Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'SHP'
+    bl_label = 'Shp'
+    bl_idname = 'SHP_PT_shp'
 
-    def draw_item(self, context, layout, data, item: SHP_PG_MaterialItem, icon, active_data, active_propname, index):
-        mat: bpy.types.Material = item.material
-        # draw_item must handle the three layout types... Usually 'DEFAULT' and 'COMPACT' can share the same code.
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            if mat:
-                layout.prop(mat, 'name', text='', emboss=False,
-                            icon_value=layout.icon(mat))
-            else:
-                layout.label(text='', translate=False,
-                             icon_value=layout.icon(mat))
-        # 'GRID' layout type should be as compact as possible (typically a single icon!).
-        elif self.layout_type == 'GRID':
-            layout.alignment = 'CENTER'
-            layout.label(text='', icon_value=layout.icon(mat))
+    def draw(self, context):
+        layout = self.layout
+        settings = SHP_PG_GlobalSettings.get_instance()
+
+        if not settings:
+            row = layout.row()
+            row.label(text='未启用 SHP, 请检查是否使用了模板')
+            return
+
+        layout.prop(settings, 'output_template')
+
+        col = layout.column(align=True)
+        col.prop(settings, 'mode')
+        row = col.row(align=True)
+        row.prop(settings, 'use_alpha')
+        row.prop(settings, 'house_mode')
+
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.prop(settings, 'reverse')
+        row.prop(settings, 'directions')
+        col.label(
+            text=f"{settings.angle_per_direction}°/direction * {settings.direction_count} diretions")
+
+    def draw_header(self, context):
+        layout = self.layout
+        layout.label(icon='OBJECT_DATA', text="")
 
 
-class SHP_UL_object_list(bpy.types.UIList):
 
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        obj: bpy.types.Object = item.object
-        # draw_item must handle the three layout types... Usually 'DEFAULT' and 'COMPACT' can share the same code.
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            if obj:
-                layout.prop(obj, 'name', text='', emboss=False,
-                            icon_value=layout.icon(obj))
-            else:
-                layout.label(text='', translate=False,
-                             icon_value=layout.icon(obj))
-        # 'GRID' layout type should be as compact as possible (typically a single icon!).
-        elif self.layout_type == 'GRID':
-            layout.alignment = 'CENTER'
-            layout.label(text='', icon_value=layout.icon(obj))
-
-
-class SHP_UL_marker_list(bpy.types.UIList):
-
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        item: SHP_PG_MarkerItem
-        # draw_item must handle the three layout types... Usually 'DEFAULT' and 'COMPACT' can share the same code.
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            if item:
-                frameRange = f"{item.start}" if item.start == item.end else f"{item.start}-{item.end}"
-
-                row = layout.row()
-                row.prop(item, 'name', text='', emboss=False,
-                         icon_value=layout.icon(item))
-                row.label(text=frameRange, translate=False)
-            else:
-                layout.label(text='', translate=False,
-                             icon_value=layout.icon(item))
-        # 'GRID' layout type should be as compact as possible (typically a single icon!).
-        elif self.layout_type == 'GRID':
-            layout.alignment = 'CENTER'
-            layout.label(text='', icon_value=layout.icon(item))
