@@ -1,10 +1,11 @@
 import bpy
 
+from .props import SHP_PG_MaterialItem
 from .props import SHP_PG_MarkerItem
 
 class SHP_UL_material_list(bpy.types.UIList):
 
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+    def draw_item(self, context, layout, data, item: SHP_PG_MaterialItem, icon, active_data, active_propname, index):
         mat: bpy.types.Material = item.material
         # draw_item must handle the three layout types... Usually 'DEFAULT' and 'COMPACT' can share the same code.
         if self.layout_type in {'DEFAULT', 'COMPACT'}:

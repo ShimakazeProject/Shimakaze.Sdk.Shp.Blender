@@ -15,20 +15,6 @@ class SHP_PG_ObjectItem(bpy.types.PropertyGroup):
 
 
 class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
-    name: bpy.props.StringProperty(name='Name')
-    name_buf: bpy.props.StringProperty(
-        name='Name', update=update_name)
-    end_name: bpy.props.StringProperty(get=get_end_name)
-    start: bpy.props.IntProperty(name="Start", update=update_start)
-    end: bpy.props.IntProperty(name="End", update=update_end)
-
-    fixed_direction: bpy.props.BoolProperty(
-        name='仅使用同一方向', update=update_direction)
-    use_direction: bpy.props.BoolProperty(
-        name='使用方向', update=update_direction)  # 给渲染使用
-    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
-    angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
-    angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
 
     def get_end_name(self):
         return self.end_name
@@ -109,48 +95,23 @@ class SHP_PG_MarkerItem(bpy.types.PropertyGroup):
         context.scene.frame_current = self.start
         self.update_direction(context)
 
+    name: bpy.props.StringProperty(name='Name')
+    name_buf: bpy.props.StringProperty(
+        name='Name', update=update_name)
+    end_name: bpy.props.StringProperty(get=get_end_name)
+    start: bpy.props.IntProperty(name="Start", update=update_start)
+    end: bpy.props.IntProperty(name="End", update=update_end)
+
+    fixed_direction: bpy.props.BoolProperty(
+        name='仅使用同一方向', update=update_direction)
+    use_direction: bpy.props.BoolProperty(
+        name='使用方向', update=update_direction)  # 给渲染使用
+    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
+    angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
+    angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
+
 
 class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
-    use_alpha: bpy.props.BoolProperty(
-        name='Alpha', update=update_render_type)
-    house_mode: bpy.props.BoolProperty(
-        name='所属色模式', update=update_house_mode)
-    mode: bpy.props.EnumProperty(name='Mode', items=[
-        ('Object', '对象', '渲染对象'),
-        ('Shadow', '影子', '渲染影子'),
-        ('Buildup', 'Buildup', 'Buildup'),
-        ('Preview', 'Preview', 'Preview'),
-        ('Reset', 'Reset', 'Reset'),
-    ], update=update_render_type)
-
-    output_template: bpy.props.StringProperty(
-        name='输出模板', default='//{action}/{mode}/{direction}/', update=update_output)
-    output: bpy.props.StringProperty(name='Output Path', get=get_output)
-
-    house_materials: bpy.props.CollectionProperty(
-        name='所属色材质', type=SHP_PG_MaterialItem)
-    active_house_material_index: bpy.props.IntProperty(
-        name='当前选中的所属色材质')
-
-    objects: bpy.props.CollectionProperty(
-        name='对象', type=SHP_PG_ObjectItem)
-    active_object_index: bpy.props.IntProperty(
-        name='当前选中的对象')
-
-    markers: bpy.props.CollectionProperty(
-        name='Marker', type=SHP_PG_MarkerItem)
-    active_marker_index: bpy.props.IntProperty(
-        name='Current Marker', update=update_timeline)
-
-    reverse: bpy.props.BoolProperty(
-        name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
-    directions: bpy.props.IntProperty(
-        name='方向数/8', min=0, default=1, update=update_direction)
-
-    direction_count: bpy.props.IntProperty(
-        name='方向数量', get=get_direction_count)
-    angle_per_direction: bpy.props.FloatProperty(
-        name='每方向角度', get=get_angle_per_direction)
 
     @staticmethod
     def get_instance() -> typing.Union[SHP_PG_RenderSettings | None]:
@@ -545,3 +506,44 @@ class SHP_PG_RenderSettings(bpy.types.PropertyGroup):
             return
 
         item.update_timeline(context)
+
+    use_alpha: bpy.props.BoolProperty(
+        name='Alpha', update=update_render_type)
+    house_mode: bpy.props.BoolProperty(
+        name='所属色模式', update=update_house_mode)
+    mode: bpy.props.EnumProperty(name='Mode', items=[
+        ('Object', '对象', '渲染对象'),
+        ('Shadow', '影子', '渲染影子'),
+        ('Buildup', 'Buildup', 'Buildup'),
+        ('Preview', 'Preview', 'Preview'),
+        ('Reset', 'Reset', 'Reset'),
+    ], update=update_render_type)
+
+    output_template: bpy.props.StringProperty(
+        name='输出模板', default='//{action}/{mode}/{direction}/', update=update_output)
+    output: bpy.props.StringProperty(name='Output Path', get=get_output)
+
+    house_materials: bpy.props.CollectionProperty(
+        name='所属色材质', type=SHP_PG_MaterialItem)
+    active_house_material_index: bpy.props.IntProperty(
+        name='当前选中的所属色材质')
+
+    objects: bpy.props.CollectionProperty(
+        name='对象', type=SHP_PG_ObjectItem)
+    active_object_index: bpy.props.IntProperty(
+        name='当前选中的对象')
+
+    markers: bpy.props.CollectionProperty(
+        name='Marker', type=SHP_PG_MarkerItem)
+    active_marker_index: bpy.props.IntProperty(
+        name='Current Marker', update=update_timeline)
+
+    reverse: bpy.props.BoolProperty(
+        name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
+    directions: bpy.props.IntProperty(
+        name='方向数/8', min=0, default=1, update=update_direction)
+
+    direction_count: bpy.props.IntProperty(
+        name='方向数量', get=get_direction_count)
+    angle_per_direction: bpy.props.FloatProperty(
+        name='每方向角度', get=get_angle_per_direction)
