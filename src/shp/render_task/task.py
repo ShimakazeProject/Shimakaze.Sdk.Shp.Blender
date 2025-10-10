@@ -15,7 +15,14 @@ class SHP_PG_RenderTask(bpy.types.PropertyGroup):
         ('Reset', 'Reset', 'Reset'),
     ])
     action_name: bpy.props.StringProperty(name='Action')
-    direction: bpy.props.IntProperty(name='物体方向')
+
+    def get_action(self):
+        action_settings = SHP_PG_ActionSettings.get_instance()
+        if not action_settings:
+            return None
+
+        action: SHP_PG_Action = action_settings.actions.get(self.action_name)
+        return action
 
     def record(self):
         from ..settings import SHP_PG_GlobalSettings
@@ -35,24 +42,28 @@ class SHP_PG_RenderTask(bpy.types.PropertyGroup):
         self.house_mode = settings.house_mode
         self.mode = settings.mode
         self.action_name = action.name
+        
+        mode = self.mode
+        if self.house_mode:
+            mode += ' (House)'
+        self.name = f"{self.action_name} - {mode}"
         return True
 
-    def apply(self):
+    def apply(self, direction: int):
         from ..settings import SHP_PG_GlobalSettings
         settings = SHP_PG_GlobalSettings.get_instance()
         if not settings:
             return False
 
-        action_settings: SHP_PG_ActionSettings = settings.action
-        if not action_settings:
-            return False
-
-        action: SHP_PG_Action = action_settings.actions.get(self.action_name)
+        action: SHP_PG_Action = self.get_action()
 
         settings.use_alpha = self.use_alpha
         settings.house_mode = self.house_mode
         settings.mode = self.mode
 
+        if not action.fixed_direction:
+            action.use_direction = True
+            action.direction = direction
         action.apply_timeline(bpy.context)
 
     def clean(self):

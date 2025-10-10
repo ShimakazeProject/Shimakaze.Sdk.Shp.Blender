@@ -34,19 +34,12 @@ class SHP_OT_RenderQueue_Render(bpy.types.Operator):
     bl_label = '渲染队列'
     bl_options = {'REGISTER', 'UNDO'}
 
-    # 类变量，防止重复运行
-    _is_running = False
-    _should_remove = False
-
-    @classmethod
-    def poll(self, context):
-        return not self._is_running  # 防止重复运行
+    __latest_name = ''
+    __max_direction = 0
+    __current_direction = 0
 
     def execute(self, context):
-        if self._is_running:
-            return {'CANCELLED'}
-
-        self._is_running = True
+        from .. import SHP_PG_GlobalSettings
 
         # 注册 handlers（只加一次）
         if self.on_render_complete not in bpy.app.handlers.render_complete:
@@ -54,6 +47,10 @@ class SHP_OT_RenderQueue_Render(bpy.types.Operator):
         if self.on_render_cancel not in bpy.app.handlers.render_cancel:
             bpy.app.handlers.render_cancel.append(self.on_render_cancel)
 
+        settings = SHP_PG_GlobalSettings.get_instance()
+        self.__latest_name = ''
+        self.__max_direction = settings.direction_count
+        self.__current_direction = 0
         self.on_render_complete()
 
         return {'FINISHED'}
@@ -61,30 +58,36 @@ class SHP_OT_RenderQueue_Render(bpy.types.Operator):
     def on_render_cancel(self, *args):
         """渲染被用户取消时"""
         self._cleanup_handlers()
-        self._is_running = False
 
     def on_render_complete(self, *args):
         """渲染完成时"""
-        if not self._is_running:
-            return
-
         render_queue = SHP_PG_RenderQueue.get_instance()
 
-        if self._should_remove:
-            render_queue.dequeue()
-            self._should_remove = False
-        if item := render_queue.peek():
-            self._should_remove = True
-            try:
-                item.apply()
-                bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
-            except Exception as e:
-                self.report({'ERROR'}, f"应用队列项失败: {e}")
-                # 继续处理下一个
-                self.on_render_complete()
-        else:
+        # 获取当前任务
+        item = render_queue.peek()
+        if not item:
+            # 队列为空，结束
             self._cleanup_handlers()
-            self._is_running = False
+            return
+
+        try:
+            if self.__latest_name == item.name and self.__current_direction >= self.__max_direction:
+                # 申领新任务
+                item.clean()
+                render_queue.dequeue()
+                item = render_queue.peek()
+                self.__current_direction
+
+            action = item.get_action()
+            self.__latest_name = item.name
+            item.apply(self.__current_direction)
+            self.__current_direction += self.__max_direction if action.fixed_direction else 1
+
+            bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
+        except Exception as e:
+            self.report({'ERROR'}, f"应用队列项失败: {e}")
+            # 继续处理下一个
+            self.on_render_complete()
 
     def _cleanup_handlers(self):
         """安全移除 handlers"""
@@ -96,5 +99,4 @@ class SHP_OT_RenderQueue_Render(bpy.types.Operator):
     def cancel(self, context):
         """用户中断操作（如按 ESC）"""
         self._cleanup_handlers()
-        self._is_running = False
         self.report({'INFO'}, "渲染队列已取消")

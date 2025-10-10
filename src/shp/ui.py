@@ -21,17 +21,17 @@ class SHP_PT_GlobalSettings(bpy.types.Panel):
         layout.prop(settings, 'output_template')
 
         col = layout.column(align=True)
-        col.prop(settings, 'mode')
-        row = col.row(align=True)
-        row.prop(settings, 'use_alpha')
-        row.prop(settings, 'house_mode')
-
-        col = layout.column(align=True)
         row = col.row(align=True)
         row.prop(settings, 'reverse')
         row.prop(settings, 'directions')
         col.label(
             text=f"{settings.angle_per_direction}°/direction * {settings.direction_count} diretions")
+
+        col = layout.column(align=True)
+        col.prop(settings, 'mode')
+        row = col.row(align=True)
+        row.prop(settings, 'use_alpha')
+        row.prop(settings, 'house_mode')
 
     def draw_header(self, context):
         layout = self.layout

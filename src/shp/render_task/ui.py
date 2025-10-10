@@ -17,10 +17,7 @@ class SHP_UL_render_list(bpy.types.UIList):
             layout.label(text=item.name, icon_value=layout.icon(item))
             return
 
-        mode = item.mode
-        if item.house_mode:
-            mode += ' (House)'
-        layout.label(text=f"{item.action_name} - {mode}",
+        layout.label(text=item.name,
                      icon_value=layout.icon(item))
 
 
