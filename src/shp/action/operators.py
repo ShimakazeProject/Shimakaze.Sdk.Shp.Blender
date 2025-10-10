@@ -9,10 +9,8 @@ class SHP_OT_Action_Init(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings = SHP_PG_ActionSettings.get_instance()
-        if not settings:
-            return {'CANCELLED'}
-        if not settings.init_actions(context):
+        acction_settings = SHP_PG_ActionSettings.get_instance()
+        if not acction_settings or not acction_settings.init_actions(context):
             return {'CANCELLED'}
 
         return {'FINISHED'}
@@ -24,10 +22,8 @@ class SHP_OT_Action_Add(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings = SHP_PG_ActionSettings.get_instance()
-        if not settings:
-            return {'CANCELLED'}
-        if not settings.add_action(context):
+        acction_settings = SHP_PG_ActionSettings.get_instance()
+        if not acction_settings or not acction_settings.add_action(context):
             return {'CANCELLED'}
 
         return {'FINISHED'}
@@ -39,10 +35,8 @@ class SHP_OT_Action_Remove(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        settings = SHP_PG_ActionSettings.get_instance()
-        if not settings:
-            return {'CANCELLED'}
-        if not settings.remove_action(context):
+        acction_settings = SHP_PG_ActionSettings.get_instance()
+        if not acction_settings or not acction_settings.remove_action(context):
             return {'CANCELLED'}
 
         return {'FINISHED'}

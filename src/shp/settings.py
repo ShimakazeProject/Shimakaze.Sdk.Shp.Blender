@@ -2,6 +2,8 @@ from __future__ import annotations
 import typing
 import bpy
 
+from .render_task.task import SHP_PG_RenderTask
+
 from .render_task import SHP_PG_RenderQueue
 from .house_material import SHP_PG_HouseMaterialSettings
 from .action import SHP_PG_ActionSettings
@@ -18,8 +20,96 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
 
         return text.shp
 
+    action: bpy.props.PointerProperty(
+        name='Action', type=SHP_PG_ActionSettings)
+
+    object: bpy.props.PointerProperty(
+        name='Object', type=SHP_PG_ObjectSettings)
+
+    house_material: bpy.props.PointerProperty(
+        name='House Material', type=SHP_PG_HouseMaterialSettings)
+
+    render_queue: bpy.props.PointerProperty(
+        name='Render Queue', type=SHP_PG_RenderQueue)
+
+    def update_render_type(self, context: bpy.types.Context):
+        self.update_output(context)
+        object_settings: SHP_PG_ObjectSettings = self.object
+        objects = object_settings.get_objects()
+        materials = SHP_PG_HouseMaterialSettings.get_house_materials_from_objects(
+            objects)
+        house_materials = map(lambda slot: slot.material,
+                              self.house_material.house_materials)
+        if self.house_mode:
+            SHP_PG_HouseMaterialSettings.apply_house_materials(materials, 1)
+        else:
+            SHP_PG_HouseMaterialSettings.apply_house_materials(materials, 0)
+
+        SHP_PG_HouseMaterialSettings.apply_house_materials(house_materials, 0)
+
+        context.scene.node_tree.nodes["Alpha"].check = self.use_alpha
+        context.scene.render.image_settings.color_mode = 'RGBA' if self.use_alpha else 'RGB'
+        self.init_render_settings(self.mode, None)
+
+    def get_direction_count(self):
+        return max(self.directions * 8, 1)
+
+    def get_angle_per_direction(self):
+        tmp = 360 / max(self.direction_count, 8)
+        return -tmp if self.reverse else tmp
+
+    use_alpha: bpy.props.BoolProperty(
+        name='Alpha', update=update_render_type)
+    house_mode: bpy.props.BoolProperty(
+        name='所属色模式', update=update_render_type)
+    mode: bpy.props.EnumProperty(name='Mode', items=[
+        ('Object', '对象', '渲染对象'),
+        ('Shadow', '影子', '渲染影子'),
+        ('Buildup', 'Buildup', 'Buildup'),
+        ('Preview', 'Preview', 'Preview'),
+        ('Reset', 'Reset', 'Reset'),
+    ], update=update_render_type)
+
+    def get_output(self):
+        mode = "House" if self.house_mode else self.mode
+        action_settings: SHP_PG_ActionSettings = self.action
+        action = action_settings.get_current_action()
+        path: str = self.output_template
+        path = path.replace('{mode}', mode)
+        if action:
+            path = path.replace('{direction}', f"{action.direction}")
+            path = path.replace('{direction_text}', f"{action.angle_text}")
+            path = path.replace('{action}', f"{action.name}")
+        return path
+
+    output: bpy.props.StringProperty(name='Output Path', get=get_output)
+
+    def update_output(self, context: bpy.types.Context):
+        if context.scene.render.filepath == self.output:
+            return
+        context.scene.render.filepath = self.output
+    output_template: bpy.props.StringProperty(
+        name='Output', default='//{action}/{mode}/{direction}/', update=update_output)
+
+    def update_direction(self, context: bpy.types.Context):
+        action_settings: SHP_PG_ActionSettings = self.action
+        action = action_settings.get_current_action()
+        if action:
+            action.update_direction(context)
+    reverse: bpy.props.BoolProperty(
+        name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
+    directions: bpy.props.IntProperty(
+        name='方向数/8', min=0, default=1, update=update_direction)
+
+    direction_count: bpy.props.IntProperty(
+        name='方向数量', get=get_direction_count)
+    angle_per_direction: bpy.props.FloatProperty(
+        name='每方向角度', get=get_angle_per_direction)
+
     @staticmethod
-    def init_render_settings(type: typing.Literal['Object', 'Shadow', 'Buildup', 'Preview', 'Reset'], engine: typing.Literal['Cycles', 'Eevee', None]):
+    def init_render_settings(
+            type: typing.Literal['Object', 'Shadow', 'Buildup', 'Preview', 'Reset'],
+            engine: typing.Literal['Cycles', 'Eevee', None] = None):
         """初始化渲染设置"""
         if engine == None:
             if bpy.context.scene.render.engine.find('CYCLES') >= 0:
@@ -120,88 +210,3 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
             case 'Reset':
                 bpy.data.objects[f"Plane.grey.{suffix}"].hide_render = False
                 bpy.data.objects[f"Sun.{suffix}"].hide_render = False
-
-    action: bpy.props.PointerProperty(
-        name='Action', type=SHP_PG_ActionSettings)
-
-    object: bpy.props.PointerProperty(
-        name='Object', type=SHP_PG_ObjectSettings)
-
-    house_material: bpy.props.PointerProperty(
-        name='House Material', type=SHP_PG_HouseMaterialSettings)
-
-    render_queue: bpy.props.PointerProperty(
-        name='Render Queue', type=SHP_PG_RenderQueue)
-
-    def update_render_type(self, context: bpy.types.Context):
-        self.update_output(context)
-        object_settings: SHP_PG_ObjectSettings = self.object
-        objects = object_settings.get_objects()
-        materials = SHP_PG_HouseMaterialSettings.get_house_materials_from_objects(
-            objects)
-        house_materials = map(lambda slot: slot.material, self.house_material.house_materials)
-        if self.house_mode:
-            SHP_PG_HouseMaterialSettings.apply_house_materials(materials, 1)
-        else:
-            SHP_PG_HouseMaterialSettings.apply_house_materials(materials, 0)
-
-        SHP_PG_HouseMaterialSettings.apply_house_materials(house_materials, 0)
-
-        context.scene.node_tree.nodes["Alpha"].check = self.use_alpha
-        context.scene.render.image_settings.color_mode = 'RGBA' if self.use_alpha else 'RGB'
-        self.init_render_settings(self.mode, None)
-
-    def get_direction_count(self):
-        return max(self.directions * 8, 1)
-
-    def get_angle_per_direction(self):
-        tmp = 360 / max(self.direction_count, 8)
-        return -tmp if self.reverse else tmp
-
-    use_alpha: bpy.props.BoolProperty(
-        name='Alpha', update=update_render_type)
-    house_mode: bpy.props.BoolProperty(
-        name='所属色模式', update=update_render_type)
-    mode: bpy.props.EnumProperty(name='Mode', items=[
-        ('Object', '对象', '渲染对象'),
-        ('Shadow', '影子', '渲染影子'),
-        ('Buildup', 'Buildup', 'Buildup'),
-        ('Preview', 'Preview', 'Preview'),
-        ('Reset', 'Reset', 'Reset'),
-    ], update=update_render_type)
-
-    def get_output(self):
-        mode = "House" if self.house_mode else self.mode
-        action_settings: SHP_PG_ActionSettings = self.action
-        action = action_settings.get_current_action()
-        path: str = self.output_template
-        path = path.replace('{mode}', mode)
-        if action:
-            path = path.replace('{direction}', f"{action.direction}")
-            path = path.replace('{direction_text}', f"{action.angle_text}")
-            path = path.replace('{action}', f"{action.name}")
-        return path
-
-    output: bpy.props.StringProperty(name='Output Path', get=get_output)
-
-    def update_output(self, context: bpy.types.Context):
-        if context.scene.render.filepath == self.output:
-            return
-        context.scene.render.filepath = self.output
-    output_template: bpy.props.StringProperty(
-        name='Output', default='//{action}/{mode}/{direction}/', update=update_output)
-
-    def update_direction(self, context: bpy.types.Context):
-        action_settings: SHP_PG_ActionSettings = self.action
-        action = action_settings.get_current_action()
-        if action:
-            action.update_direction(context)
-    reverse: bpy.props.BoolProperty(
-        name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
-    directions: bpy.props.IntProperty(
-        name='方向数/8', min=0, default=1, update=update_direction)
-
-    direction_count: bpy.props.IntProperty(
-        name='方向数量', get=get_direction_count)
-    angle_per_direction: bpy.props.FloatProperty(
-        name='每方向角度', get=get_angle_per_direction)

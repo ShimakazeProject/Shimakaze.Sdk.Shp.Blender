@@ -12,12 +12,14 @@ class SHP_UL_render_list(bpy.types.UIList):
     bl_idname = 'SHP_UL_render_list'
 
     def draw_item(self, context, layout: bpy.types.UILayout, data, item: SHP_PG_RenderTask, icon, active_data, active_propname, index):
-        if not item:
-            layout.label(text='-BAD-', translate=False,
-                         icon_value=layout.icon(item))
+        if self.layout_type == 'GRID':
+            layout.alignment = 'CENTER'
+            layout.label(text=item.name, icon_value=layout.icon(item))
             return
 
-        mode = 'House' if item.house_mode else item.mode
+        mode = item.mode
+        if item.house_mode:
+            mode += ' (House)'
         layout.label(text=f"{item.action_name} - {mode}",
                      icon_value=layout.icon(item))
 

@@ -1,5 +1,4 @@
 from __future__ import annotations
-import typing
 import bpy
 
 from .item import SHP_PG_Action
@@ -9,33 +8,32 @@ class SHP_PG_ActionSettings(bpy.types.PropertyGroup):
     @staticmethod
     def get_instance() -> SHP_PG_ActionSettings | None:
         from ..settings import SHP_PG_GlobalSettings
-        settings = SHP_PG_GlobalSettings.get_instance()
-        if settings:
+        if settings := SHP_PG_GlobalSettings.get_instance():
             return settings.action
 
-    def init_actions(self, context: bpy.types.Context):
-        # 明确类型
-        frame_map: typing.Dict[str,  typing.Tuple[int, int]] = {}
+    def update_timeline(self, context: bpy.types.Context):
+        if item := self.get_current_action():
+            item.apply_timeline(context)
 
-        for marker in context.scene.timeline_markers:
-            name = marker.name
-            if name.endswith('_End'):
-                base_name = name[:-4]
-                start, end = frame_map.get(
-                    base_name, (marker.frame, marker.frame))
-                frame_map[base_name] = (start, marker.frame)  # 只更新 end
-            else:
-                base_name = name
-                start, end = frame_map.get(
-                    base_name, (marker.frame, marker.frame))
-                frame_map[base_name] = (marker.frame, end)  # 只更新 start
+    actions: bpy.props.CollectionProperty(
+        name='Action', type=SHP_PG_Action)
+
+    current_action_index: bpy.props.IntProperty(
+        name='Current Action', update=update_timeline)
+
+    def init_actions(self, context: bpy.types.Context):
+        frames = filter(
+            lambda item: not item.name.endswith('_End'),
+            context.scene.timeline_markers)
 
         self.actions.clear()
-        for item in frame_map:
+        for start in frames:
+            end = context.scene.timeline_markers.get(f'{start.name}_End')
             slot: SHP_PG_Action = self.actions.add()
-            slot.name = item
-            slot.name_buf = item
-            (slot.start, slot.end) = frame_map.get(item)
+            slot.name = start.name
+            slot.name_buf = start.name
+            slot.start = start.frame
+            slot.end = end.frame if end else start.frame
 
         return True
 
@@ -65,14 +63,3 @@ class SHP_PG_ActionSettings(bpy.types.PropertyGroup):
 
         item: SHP_PG_Action = self.actions[self.current_action_index]
         return item
-
-    def update_timeline(self, context: bpy.types.Context):
-        item = self.get_current_action()
-        if item:
-            item.update_timeline(context)
-
-    actions: bpy.props.CollectionProperty(
-        name='Action', type=SHP_PG_Action)
-
-    current_action_index: bpy.props.IntProperty(
-        name='Current Action', update=update_timeline)

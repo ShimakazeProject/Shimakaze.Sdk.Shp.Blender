@@ -2,7 +2,20 @@ from __future__ import annotations
 import math
 import bpy
 
+
 class SHP_PG_Action(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty(name='Name')
+
+    @staticmethod
+    def update_marker_name(context: bpy.types.Context, name: str, new_name: str | None = None, frame: int | None = None):
+        marker = context.scene.timeline_markers.get(name)
+        if not marker:
+            marker = context.scene.timeline_markers.new(name)
+
+        if new_name:
+            marker.name = new_name
+        if frame:
+            marker.frame = frame
 
     def get_end_name(self):
         return f"{self.name}_End"
@@ -10,35 +23,28 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
     def update_name(self, context: bpy.types.Context):
         old_name = self.name
         new_name = self.name_buf
-        marker = context.scene.timeline_markers.get(old_name)
-        if marker:
-            marker.name = new_name
-        else:
-            context.scene.timeline_markers.new(self.name, frame=self.start)
 
-        marker = context.scene.timeline_markers.get(self.end_name)
-        if marker:
-            marker.name = f"{new_name}_End"
-        else:
-            context.scene.timeline_markers.new(
-                self.end_name, frame=self.end)
+        SHP_PG_Action.update_marker_name(
+            context, old_name,
+            new_name=new_name,
+            frame=self.start)
+        if self.start is not self.end:
+            SHP_PG_Action.update_marker_name(
+                context, f"{old_name}_End",
+                new_name=f"{new_name}_End",
+                frame=self.end)
+
         self.name = new_name
 
     def update_start(self, context: bpy.types.Context):
-        value = self.start
-        marker = context.scene.timeline_markers.get(self.name)
-        if marker:
-            marker.frame = value
-        else:
-            context.scene.timeline_markers.new(self.name, frame=value)
+        SHP_PG_Action.update_marker_name(
+            context, self.name,
+            frame=self.start)
 
     def update_end(self, context: bpy.types.Context):
-        value = self.end
-        marker = context.scene.timeline_markers.get(self.end_name)
-        if marker:
-            marker.frame = value
-        else:
-            context.scene.timeline_markers.new(self.end_name, frame=value)
+        SHP_PG_Action.update_marker_name(
+            context, self.end_name,
+            frame=self.end)
 
     def get_angle(self):
         from ..settings import SHP_PG_GlobalSettings
@@ -46,34 +52,19 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
         return self.direction * settings.angle_per_direction
 
     def get_angle_text(self):
-        from ..settings import SHP_PG_GlobalSettings
-        settings = SHP_PG_GlobalSettings.get_instance()
-        if settings.direction_count > 16:
-            return
-
-        if settings.direction_count == 16:
-            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
-                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
-        else:
-            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
-
-        index = self.direction % len(signs)
-        if settings.reverse and index != 0:
-            index = len(signs) - index
-
-        return signs[index]
+        SHP_PG_Action.s_get_angle_text(self.direction)
 
     def update_direction(self, context: bpy.types.Context):
-        from ..object import SHP_PG_Object
+        from ..object import SHP_PG_ObjectSettings, SHP_PG_Object
         from ..settings import SHP_PG_GlobalSettings
+        object_settings = SHP_PG_ObjectSettings.get_instance()
         settings = SHP_PG_GlobalSettings.get_instance()
         settings.update_output(context)
-        
 
         radians = math.radians(self.angle + 225) \
             if self.fixed_direction or self.use_direction \
             else 0
-        for item in settings.object.objects:
+        for item in object_settings.objects:
             item: SHP_PG_Object
             item.object.rotation_euler[2] = radians
 
@@ -82,13 +73,6 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
             if area.type == 'VIEW_3D':
                 area.tag_redraw()
 
-    def update_timeline(self, context: bpy.types.Context):
-        context.scene.frame_start = self.start
-        context.scene.frame_end = self.end
-        context.scene.frame_current = self.start
-        self.update_direction(context)
-
-    name: bpy.props.StringProperty(name='Name')
     name_buf: bpy.props.StringProperty(
         name='Name', update=update_name)
     end_name: bpy.props.StringProperty(get=get_end_name)
@@ -103,3 +87,27 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
     angle: bpy.props.FloatProperty(name='物体角度', get=get_angle)
     angle_text: bpy.props.StringProperty(name='物体方向', get=get_angle_text)
 
+    def apply_timeline(self, context: bpy.types.Context):
+        context.scene.frame_current = self.start
+        context.scene.frame_start = self.start
+        context.scene.frame_end = self.end
+        self.update_direction(context)
+
+    @staticmethod
+    def s_get_angle_text(direction: int):
+        from ..settings import SHP_PG_GlobalSettings
+        settings = SHP_PG_GlobalSettings.get_instance()
+        if settings.direction_count > 16:
+            return
+
+        if settings.direction_count == 16:
+            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
+                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
+        else:
+            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
+
+        index = direction % len(signs)
+        if settings.reverse and index != 0:
+            index = len(signs) - index
+
+        return signs[index]

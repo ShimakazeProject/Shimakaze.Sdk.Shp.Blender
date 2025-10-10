@@ -9,20 +9,14 @@ from .operators import SHP_OT_Object_Add, SHP_OT_Object_Remove
 
 class SHP_UL_object_list(bpy.types.UIList):
     bl_idname = 'SHP_UL_object_list'
+
     def draw_item(self, context, layout: bpy.types.UILayout, data, item: SHP_PG_Object, icon, active_data, active_propname, index):
-        obj: bpy.types.Object = item.object
-        # draw_item must handle the three layout types... Usually 'DEFAULT' and 'COMPACT' can share the same code.
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            if obj:
-                layout.prop(obj, 'name', text='', emboss=False,
-                            icon_value=layout.icon(obj))
-            else:
-                layout.label(text='', translate=False,
-                             icon_value=layout.icon(obj))
-        # 'GRID' layout type should be as compact as possible (typically a single icon!).
-        elif self.layout_type == 'GRID':
+        if self.layout_type == 'GRID':
             layout.alignment = 'CENTER'
-            layout.label(text='', icon_value=layout.icon(obj))
+            layout.label(text=item.name, icon_value=layout.icon(item.object))
+            return
+
+        layout.label(text=item.name, icon_value=layout.icon(item.object))
 
 
 class SHP_PT_Object(bpy.types.Panel):

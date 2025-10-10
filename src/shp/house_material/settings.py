@@ -7,11 +7,12 @@ from ..object import SHP_PG_ObjectSettings
 
 
 class SHP_PG_HouseMaterialSettings(bpy.types.PropertyGroup):
+    group_name = "HouseNodeGroup"
+
     @staticmethod
     def get_instance() -> SHP_PG_HouseMaterialSettings | None:
         from ..settings import SHP_PG_GlobalSettings
-        settings = SHP_PG_GlobalSettings.get_instance()
-        if settings:
+        if settings := SHP_PG_GlobalSettings.get_instance():
             return settings.house_material
 
     @staticmethod
@@ -20,8 +21,7 @@ class SHP_PG_HouseMaterialSettings(bpy.types.PropertyGroup):
         materials: typing.Set[bpy.types.Material] = set()
         for object in objects:
             for slot in object.material_slots:
-                mat = slot.material
-                if mat:
+                if mat := slot.material:
                     materials.add(mat)
 
         return materials
@@ -30,26 +30,21 @@ class SHP_PG_HouseMaterialSettings(bpy.types.PropertyGroup):
     def apply_house_materials(list: typing.Iterable[bpy.types.Material], value: float):
         """应用所属色材质值"""
         for material in list:
-            nodes = material.node_tree.nodes
+            SHP_PG_HouseMaterial.apply(material, value)
 
-            # 获取 HouseNodeGroup
-            group_name = "HouseNodeGroup"
-            house_group_node = nodes.get(group_name)
-            if not house_group_node:
-                print(f"找不到节点组 {group_name}")
-                continue
+    house_materials: bpy.props.CollectionProperty(
+        name='所属色材质', type=SHP_PG_HouseMaterial)
+    current_house_material_index: bpy.props.IntProperty(
+        name='当前选中的所属色材质')
 
-            # 设置默认值
-            house_group_node.inputs['Factor'].default_value = value
-
-    def init_materials(self, context: bpy.types.Context):
-        group_name = 'HouseNodeGroup'
-
+    def create_house_material_group(self, context: bpy.types.Context):
         # 获取或创建节点组
-        node_group = context.blend_data.node_groups.get(group_name)
+        node_group = context.blend_data.node_groups.get(
+            SHP_PG_HouseMaterialSettings.group_name)
         if not node_group:
             node_group = context.blend_data.node_groups.new(
-                name=group_name, type='ShaderNodeTree')
+                name=SHP_PG_HouseMaterialSettings.group_name,
+                type='ShaderNodeTree')
 
         # 清空旧节点，确保是干净的节点组
         node_group.nodes.clear()
@@ -94,6 +89,9 @@ class SHP_PG_HouseMaterialSettings(bpy.types.PropertyGroup):
         node_group.links.new(transparent.outputs[0], mix2.inputs[1])
         node_group.links.new(holdout.outputs[0], mix2.inputs[2])
         node_group.links.new(mix2.outputs[0], mix.inputs[2])
+
+    def init_materials(self, context: bpy.types.Context):
+        self.create_house_material_group(context)
 
         objects = SHP_PG_ObjectSettings.get_instance().get_objects()
         for mat in self.get_house_materials_from_objects(objects):
@@ -152,13 +150,11 @@ class SHP_PG_HouseMaterialSettings(bpy.types.PropertyGroup):
         if not mat:
             return False
 
-        for item in self.house_materials:
-            if item.material == mat:
-                return False
+        if self.house_materials.get(mat.name):
+            return False
 
         slot: SHP_PG_HouseMaterial = self.house_materials.add()
         slot.material = mat
-        self.current_house_material_index += 1
 
         return True
 
@@ -171,8 +167,3 @@ class SHP_PG_HouseMaterialSettings(bpy.types.PropertyGroup):
             0, self.current_house_material_index - 1)
 
         return True
-
-    house_materials: bpy.props.CollectionProperty(
-        name='所属色材质', type=SHP_PG_HouseMaterial)
-    current_house_material_index: bpy.props.IntProperty(
-        name='当前选中的所属色材质')

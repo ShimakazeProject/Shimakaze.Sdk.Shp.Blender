@@ -12,7 +12,12 @@ class SHP_PG_ObjectSettings(bpy.types.PropertyGroup):
         settings = SHP_PG_GlobalSettings.get_instance()
         if settings:
             return settings.object
-        
+
+    objects: bpy.props.CollectionProperty(
+        name='对象', type=SHP_PG_Object)
+    current_object_index: bpy.props.IntProperty(
+        name='当前选中的对象')
+
     def get_objects(self):
         objects: typing.Set[bpy.types.Object] = set()
         for slot in self.objects:
@@ -25,21 +30,12 @@ class SHP_PG_ObjectSettings(bpy.types.PropertyGroup):
         return objects
 
     def add_objects(self, context: bpy.types.Context):
-        if len(context.selected_objects) < 1:
-            return False
+        objects = filter(lambda object: not self.objects.get(
+            object.name), context.selected_objects)
 
-        for object in context.selected_objects:
-            exists = False
-            for item in self.objects:
-                if item.object == object:
-                    exists = True
-
-            if exists:
-                continue
-
+        for object in objects:
             slot: SHP_PG_Object = self.objects.add()
             slot.object = object
-            self.current_object_index += 1
 
         return True
 
@@ -52,8 +48,3 @@ class SHP_PG_ObjectSettings(bpy.types.PropertyGroup):
             0, self.current_object_index - 1)
 
         return True
-
-    objects: bpy.props.CollectionProperty(
-        name='对象', type=SHP_PG_Object)
-    current_object_index: bpy.props.IntProperty(
-        name='当前选中的对象')

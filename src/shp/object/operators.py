@@ -2,6 +2,7 @@ import bpy
 
 from .settings import SHP_PG_ObjectSettings
 
+
 class SHP_OT_Object_Add(bpy.types.Operator):
     bl_idname = 'shp.object_add'
     bl_label = '添加对象'
@@ -9,9 +10,7 @@ class SHP_OT_Object_Add(bpy.types.Operator):
 
     def execute(self, context):
         settings = SHP_PG_ObjectSettings.get_instance()
-        if not settings:
-            return {'CANCELLED'}
-        if not settings.add_objects(context):
+        if not settings or not settings.add_objects(context):
             return {'CANCELLED'}
 
         return {'FINISHED'}
@@ -24,9 +23,7 @@ class SHP_OT_Object_Remove(bpy.types.Operator):
 
     def execute(self, context):
         settings = SHP_PG_ObjectSettings.get_instance()
-        if not settings:
-            return {'CANCELLED'}
-        if not settings.remote_object(context):
+        if not settings or not settings.remote_object(context):
             return {'CANCELLED'}
 
         return {'FINISHED'}
