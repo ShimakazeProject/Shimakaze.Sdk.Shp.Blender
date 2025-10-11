@@ -52,7 +52,23 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
         return self.direction * settings.angle_per_direction
 
     def get_angle_text(self):
-        SHP_PG_Action.s_get_angle_text(self.direction)
+        from ..settings import SHP_PG_GlobalSettings
+        settings = SHP_PG_GlobalSettings.get_instance()
+        index = self.direction % settings.direction_count
+
+        if settings.direction_count > 16:
+            return f'{index}'
+
+        if settings.reverse and index != 0:
+            index = settings.direction_count - index
+
+        if settings.direction_count == 16:
+            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
+                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
+        else:
+            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
+
+        return signs[index]
 
     def update_direction(self, context: bpy.types.Context):
         from ..object import SHP_PG_ObjectSettings, SHP_PG_Object
@@ -92,22 +108,3 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
         context.scene.frame_start = self.start
         context.scene.frame_end = self.end
         self.update_direction(context)
-
-    @staticmethod
-    def s_get_angle_text(direction: int):
-        from ..settings import SHP_PG_GlobalSettings
-        settings = SHP_PG_GlobalSettings.get_instance()
-        if settings.direction_count > 16:
-            return
-
-        if settings.direction_count == 16:
-            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
-                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
-        else:
-            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
-
-        index = direction % len(signs)
-        if settings.reverse and index != 0:
-            index = len(signs) - index
-
-        return signs[index]

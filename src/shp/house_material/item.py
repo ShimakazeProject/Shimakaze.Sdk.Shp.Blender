@@ -15,13 +15,13 @@ class SHP_PG_HouseMaterial(bpy.types.PropertyGroup):
     def apply(material: bpy.types.Material, value: float):
         from .settings import SHP_PG_HouseMaterialSettings
 
-        nodes = material.node_tree.nodes
         # 获取 HouseNodeGroup
-        house_group_node = nodes.get(SHP_PG_HouseMaterialSettings.group_name)
-        if not house_group_node:
-            print(f"找不到节点组 {SHP_PG_HouseMaterialSettings.group_name}")
-            return False
+        for node in material.node_tree.nodes:
+            print(node.label)
+            if node.label != SHP_PG_HouseMaterialSettings.group_name:
+                continue
 
-        # 设置默认值
-        house_group_node.inputs['Factor'].default_value = value
+            # 设置默认值
+            node.inputs['Factor'].default_value = value
+
         return True
