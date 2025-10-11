@@ -4,21 +4,76 @@
 
 这个扩展适用于 Blender 4.2 以上版本, 与 template.blend[^template] 配合使用
 
-在 3D 视图中找到 `SHP` 面板
-1. 点击`启用`（此设置绑定窗口）
+在 3D 视图中找到 `SHP` 面板即可使用
 
-- `方向数/8`：此属性*8为实际的方向数 默认为1 表示这个动作有8个方向 填0表示只有一个方向
-- `物体方向`：此属性修改`动画目标`的`欧拉旋转`的Z轴值 值为 `物体方向`*`每方向角度`
+## 面板
+1. Shp：总设置面板
+   - 输出：输出路径模板。支持以下字段：
+     - `mode` 模式。可能的值如下：
+       - `House` 当 所属色模式 被激活时
+       - `Object` 模式：对象
+       - `Shadow` 模式：影子
+       - `Buildup` 模式：Buildup
+       - `Preview` 模式：预览
+       - `Reset` 模式：重置
+     - `direction` 物体方向
+     - `direction_text` 计算得到的方向文本。小于 16 面时会显示类似 `N` `S` `E` `W` 这样的文本
+     - `action` 当前激活的动作
 
-[^template]: 模板来自 [PPM](https://ppmforums.com/topic-36965/blender-templates-tdra-ts-ra2/) [revora](https://forums.revora.net/topic/97398-blender-templates-tdra-ts-ra2/)
+   - 反向：用于创建 SHP 载具，此时物体角度将为负数，会进行顺时针旋转（默认是逆时针旋转）。
+   - 方向数/8：此值*8为实际方向数。当此值为 0 则表示只有一个方向
+
+   - 模式：初始化渲染的方案
+     - `Object` 对象模式：不渲染影子
+     - `Shadow` 影子模式：只渲染影子
+     - `Buildup` Buildup模式
+     - `Preview` 预览模式：同时渲染对象和影子
+     - `Reset` 重置模式
+
+   - Alpha: 是否允许生成透明图片
+   - 所属色模式：对象列表中的所有对象（及其子对象）的材质中不在所属色列表中的材质的`HouseNodeGroup`的系数设置为 `1`
+2. Shp Objects：对象面板。将受影响的对象添加到列表中
+   - 添加所选对象：添加所选对象到列表中
+   - 移除所选对象：移除所选对象
+3. Shp Action: 动作面板。通过在时间轴上的标记来设置动作
+   - 同步：同步时间轴上的标记为动作
+   - 添加动作：添加新动作（在时间轴上创建标记）
+   - 删除动作：删除所选动作（从时间轴上移除标记）
+   - 固定方向：固定物体方向，适用于单向的动画
+   - 物体方向：当 固定方向 或 `use_direction` 激活时，此属性会影响对象列表中的方向
+4. Shp 所属色材质：所属色材质面板
+   - 初始化：初始化所属色节点组，并将对象列表中的所有对象（及其子对象）的材质转换为所属色材质
+   - 添加材质：添加当前选中的材质到列表中
+   - 移除材质：从列表中移除材质
+   - 阻隔所选对象：选中的对象的材质的`HouseNodeGroup`的系数设置为 `1`
+   - 恢复所选对象：选中的对象的材质的`HouseNodeGroup`的系数设置为 `0`
+5. Shp 渲染器队列：渲染队列
+   - 添加：将当前选中的 Action 及当前 模式 Alpha 所属色模式 记录到队列中
+   - 删除：从队列中移除当前选中的任务
+   - 渲染队列：渲染队列中的所有任务
+
+
+[^template]: 模板修改自 [PPM](https://ppmforums.com/topic-36965/blender-templates-tdra-ts-ra2/) [revora](https://forums.revora.net/topic/97398-blender-templates-tdra-ts-ra2/)
+原始的文件名为：`CnC_CyclesX_1_00_alpha1.blend`
 
 ## 所属色材质
-所属色材质是为 [Shimakaze.Sdk.Shp.Maker](https://github.com/ShimakazeProject/Shimakaze.Sdk/tree/HEAD/src/shp/Shimakaze.Sdk.Shp.Maker) 工具设计的
+所属色材质是为 [Shimakaze.Sdk](https://github.com/ShimakazeProject/Shimakaze.Sdk) 设计的
 
-右侧从上到下分别是 `创建所属色阻隔节点组` `添加选中材质` `从列表中移除材质`
+### 为什么需要所属色材质？
+与其他图片转SHP方案不同的是，所属色材质的存在可以极大的简化应用所属色的流程
 
-`创建所属色阻隔节点组`：此按钮会创建一个名为 `HouseNodeGroup` 的节点组
+假设一下这种情况：
 
-在设置`类型`为`所属色`时 所有不在列表中的材质的`HouseNodeGroup`节点组的系数都会被设置为 `1`
+你导入了一个模型，这个模型上有一大片的蓝色，你希望把这些蓝色作为所属色应用。
+传统解决方案是 渲染前修改材质颜色为红色 或者 转换成 SHP 后手动替换颜色为红色。
+操作稍显繁琐，但能得到预期的效果。
 
-这样设置后 场景中将只显示将要被渲染为所属色的部分
+但如果模型本身有红色，此时转换的结果可能会不符合预期。
+
+Shimakaze.Sdk 的某个工具[^shimakaze.sdk.shp.maker]支持分步转换。
+原理是：
+  1. 先使用色板中非所属色（通常是32-240）范围的颜色转换对象图片
+  2. 再使用色板中的所属色（通常是16-32）范围的颜色转换所属色图片
+  3. 将结果合并保存为 SHP 帧
+
+[^shimakaze.sdk.shp.maker]: 由于并没有正式发布，工具名甚至工具用法尚未确定，请在 Shimakaze.Sdk 项目中发 Issue 来告诉我你们正在使用它，我将尽量减少不兼容更改。

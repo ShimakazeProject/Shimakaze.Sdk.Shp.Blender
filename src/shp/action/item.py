@@ -96,7 +96,7 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
     end: bpy.props.IntProperty(name="End", update=update_end)
 
     fixed_direction: bpy.props.BoolProperty(
-        name='仅使用同一方向', update=update_direction)
+        name='固定方向', update=update_direction)
     use_direction: bpy.props.BoolProperty(
         name='使用方向', update=update_direction)  # 给渲染使用
     direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
