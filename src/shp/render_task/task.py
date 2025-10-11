@@ -67,7 +67,7 @@ class SHP_PG_RenderTask(bpy.types.PropertyGroup):
         action.apply_timeline(bpy.context)
 
     def clean(self):
-        action: SHP_PG_Action = self.action_name
+        action = self.get_action()
         if not action.fixed_direction:
             action.use_direction = False
             action.direction = 0
