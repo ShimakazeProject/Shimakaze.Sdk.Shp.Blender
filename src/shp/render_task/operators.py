@@ -40,6 +40,9 @@ class SHP_OT_RenderQueue_Render(bpy.types.Operator):
     __latest_name = ''
     __max_direction = 0
     __current_direction = 0
+    __stash_house_mode: bool
+    __stash_mode: str
+
 
     def execute(self, context):
         from .. import SHP_PG_GlobalSettings
@@ -53,6 +56,8 @@ class SHP_OT_RenderQueue_Render(bpy.types.Operator):
         self.__latest_name = ''
         self.__max_direction = settings.direction_count
         self.__current_direction = 0
+        self.__stash_house_mode = settings.house_mode
+        self.__stash_mode = settings.mode
 
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -69,6 +74,10 @@ class SHP_OT_RenderQueue_Render(bpy.types.Operator):
 
     def __cleanup_handlers(self):
         """安全移除 handlers"""
+        from .. import SHP_PG_GlobalSettings
+        settings = SHP_PG_GlobalSettings.get_instance()
+        settings.house_mode = self.__stash_house_mode
+        settings.mode = self.__stash_mode
         bpy.context.window_manager.event_timer_remove(self.__timer)
         bpy.app.handlers.render_complete.remove(self.on_render_complete)
         bpy.app.handlers.render_cancel.remove(self.on_render_cancel)
