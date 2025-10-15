@@ -3,12 +3,10 @@ import math
 import typing
 import bpy
 
-from .object.item import SHP_PG_Object
-
 from .render_task import SHP_PG_RenderQueue
 from .house_material import SHP_PG_HouseMaterialSettings
-from .action import SHP_PG_ActionSettings
-from .object import SHP_PG_ObjectSettings
+from .action import SHP_PG_ActionSettings, SHP_PG_Action
+from .object import SHP_PG_ObjectSettings, SHP_PG_Object
 
 
 class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
@@ -61,27 +59,7 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
     ], update=update_render_type)
     actived_mode: bpy.props.StringProperty(
         name='Actived Mode', get=lambda self: "House" if self.house_mode else self.mode)
-
-    def get_output(self):
-        mode = self.actived_mode
-        action_settings: SHP_PG_ActionSettings = self.action
-        action = action_settings.get_current_action()
-        path: str = self.output_template
-        path = path.replace('{mode}', mode)
-
-        direction = action.direction
-        angle_text = action.angle_text
-        if self.direction_count == 1:
-            direction = self.direction
-            angle_text = self.angle_text
-
-        if action:
-            path = path.replace('{direction}', f"{direction}")
-            path = path.replace('{direction_text}', f"{angle_text}")
-            path = path.replace('{action}', f"{action.name}")
-        return path
-
-    output: bpy.props.StringProperty(name='Output Path', get=get_output)
+    output: bpy.props.StringProperty(name='Output Path', get=lambda self: self.calc_output(None))
 
     def update_output(self, context: bpy.types.Context):
         if context.scene.render.filepath == self.output:
@@ -126,6 +104,27 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
     angle_text: bpy.props.StringProperty(
         name='物体方向', get=lambda self: self.calc_angle_text(self.direction_count, self.direction, self.reverse))
 
+    def calc_output(self, action: SHP_PG_Action | None = None):
+        path: str = self.output_template
+        if not action:
+            action_settings: SHP_PG_ActionSettings = self.action
+            action = action_settings.get_current_action()
+
+        if action:
+            direction = action.direction
+            angle_text = action.angle_text
+            name = action.name
+        else:
+            direction = self.direction
+            angle_text = self.angle_text
+            name = 'Unknown'
+
+        path = path.replace('{mode}', self.actived_mode)
+        path = path.replace('{direction}', f"{direction}")
+        path = path.replace('{direction_text}', f"{angle_text}")
+        path = path.replace('{action}', f"{name}")
+        return path
+    
     @staticmethod
     def init_render_settings(
             type: typing.Literal['Object', 'Shadow', 'Buildup', 'Preview', 'Reset'],

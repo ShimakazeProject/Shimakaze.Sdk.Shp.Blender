@@ -65,7 +65,9 @@ class SHP_PG_RenderTask(bpy.types.PropertyGroup):
             action.use_direction = True
             action.direction = direction
         action.apply_timeline(bpy.context)
-        settings.update_output(bpy.context)
+        output = settings.calc_output(action)
+        bpy.context.scene.render.filepath = output
+
 
     def clean(self):
         action = self.get_action()
