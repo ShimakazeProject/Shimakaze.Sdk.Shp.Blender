@@ -46,12 +46,12 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    bpy.types.Text.shp = bpy.props.PointerProperty(
+    bpy.types.Scene.shp = bpy.props.PointerProperty(
         type=SHP_PG_GlobalSettings)
 
 
 def unregister():
-    del bpy.types.Text.shp
+    del bpy.types.Scene.shp
 
     for cls in classes:
         bpy.utils.unregister_class(cls)

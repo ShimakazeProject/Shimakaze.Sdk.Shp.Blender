@@ -13,12 +13,8 @@ from .object import SHP_PG_ObjectSettings
 class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
     @staticmethod
     def get_instance() -> SHP_PG_GlobalSettings | None:
-        """获取全局实例"""
-        text = bpy.data.texts.get("Shimakaze.Sdk.RenderSettings")
-        if not text:
-            return None
-
-        return text.shp
+        """获取场景实例"""
+        return bpy.context.scene.shp
 
     action: bpy.props.PointerProperty(
         name='Action', type=SHP_PG_ActionSettings)
