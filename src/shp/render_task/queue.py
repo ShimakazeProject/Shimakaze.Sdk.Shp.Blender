@@ -25,6 +25,15 @@ class SHP_PG_RenderQueue(bpy.types.PropertyGroup):
         slot: SHP_PG_RenderTask = self.render_queue.add()
         return slot.record()
 
+    def enqueue_all(self):
+        from ..action.settings import SHP_PG_ActionSettings
+        for action in SHP_PG_ActionSettings.get_instance().actions:
+            slot: SHP_PG_RenderTask = self.render_queue.add()
+            if not slot.record(action):
+                return False
+
+        return True
+
     def peek(self):
         if len(self.render_queue) < 1:
             return None

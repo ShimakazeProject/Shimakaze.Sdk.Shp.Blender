@@ -16,6 +16,18 @@ class SHP_OT_RenderQueue_Add(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class SHP_OT_RenderQueue_Add_All(bpy.types.Operator):
+    bl_idname = 'shp.render_queue_add_all'
+    bl_label = '全部添加渲染任务'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        render_queue = SHP_PG_RenderQueue.get_instance()
+        if not render_queue or not render_queue.enqueue_all():
+            return {'CANCELLED'}
+
+        return {'FINISHED'}
+
 
 class SHP_OT_RenderQueue_Remove(bpy.types.Operator):
     bl_idname = 'shp.render_queue_remove'

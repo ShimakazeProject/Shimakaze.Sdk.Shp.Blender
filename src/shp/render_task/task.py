@@ -24,19 +24,20 @@ class SHP_PG_RenderTask(bpy.types.PropertyGroup):
         action: SHP_PG_Action = action_settings.actions.get(self.action_name)
         return action
 
-    def record(self):
+    def record(self,  action: SHP_PG_Action | None = None):
         from ..settings import SHP_PG_GlobalSettings
         settings = SHP_PG_GlobalSettings.get_instance()
         if not settings:
             return False
 
-        action_settings: SHP_PG_ActionSettings = settings.action
-        if not action_settings:
-            return False
-
-        action: SHP_PG_Action = action_settings.get_current_action()
         if not action:
-            return False
+            action_settings: SHP_PG_ActionSettings = settings.action
+            if not action_settings:
+                return False
+
+            action: SHP_PG_Action = action_settings.get_current_action()
+            if not action:
+                return False
 
         self.use_alpha = settings.use_alpha
         self.house_mode = settings.house_mode

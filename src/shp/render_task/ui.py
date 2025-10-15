@@ -1,7 +1,7 @@
 from __future__ import annotations
 import bpy
 
-from .operators import SHP_OT_RenderQueue_Add, SHP_OT_RenderQueue_Remove, SHP_OT_RenderQueue_Render
+from .operators import SHP_OT_RenderQueue_Add, SHP_OT_RenderQueue_Add_All, SHP_OT_RenderQueue_Remove, SHP_OT_RenderQueue_Render
 
 from .task import SHP_PG_RenderTask
 
@@ -42,6 +42,7 @@ class SHP_PT_RenderQueue(bpy.types.Panel):
             render_queue, 'current_render_queue_index')
         col = row.column(align=True)
         col.operator(SHP_OT_RenderQueue_Add.bl_idname, icon='ADD', text='')
+        col.operator(SHP_OT_RenderQueue_Add_All.bl_idname, icon='PLUS', text='')
         col.operator(SHP_OT_RenderQueue_Remove.bl_idname,
                      icon='REMOVE', text='')
 

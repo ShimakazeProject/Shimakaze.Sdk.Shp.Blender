@@ -35,6 +35,7 @@ classes = [
     SHP_UL_render_list,
     SHP_PT_RenderQueue,
     SHP_OT_RenderQueue_Add,
+    SHP_OT_RenderQueue_Add_All,
     SHP_OT_RenderQueue_Remove,
     SHP_OT_RenderQueue_Render,
     SHP_PG_GlobalSettings,
