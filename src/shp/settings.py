@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 import typing
 import bpy
 
@@ -123,7 +124,7 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
     angle: bpy.props.FloatProperty(
         name='物体角度', get=lambda self: self.direction * self.angle_per_direction)
     angle_text: bpy.props.StringProperty(
-        name='物体方向', get=lambda self: SHP_PG_GlobalSettings.calc_angle_text(self.direction_count, self.direction, self.reverse))
+        name='物体方向', get=lambda self: self.calc_angle_text(self.direction_count, self.direction, self.reverse))
 
     @staticmethod
     def init_render_settings(
