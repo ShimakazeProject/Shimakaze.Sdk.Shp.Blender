@@ -2,7 +2,7 @@ from __future__ import annotations
 import typing
 import bpy
 
-from .render_task.task import SHP_PG_RenderTask
+from .object.item import SHP_PG_Object
 
 from .render_task import SHP_PG_RenderQueue
 from .house_material import SHP_PG_HouseMaterialSettings
@@ -47,13 +47,6 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
         context.scene.render.image_settings.color_mode = 'RGBA' if self.use_alpha else 'RGB'
         self.init_render_settings(self.mode, None)
 
-    def get_direction_count(self):
-        return max(self.directions * 8, 1)
-
-    def get_angle_per_direction(self):
-        tmp = 360 / max(self.direction_count, 8)
-        return -tmp if self.reverse else tmp
-
     use_alpha: bpy.props.BoolProperty(
         name='Alpha', update=update_render_type)
     house_mode: bpy.props.BoolProperty(
@@ -65,16 +58,25 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
         ('Preview', 'Preview', 'Preview'),
         ('Reset', 'Reset', 'Reset'),
     ], update=update_render_type)
+    actived_mode: bpy.props.StringProperty(
+        name='Actived Mode', get=lambda self: "House" if self.house_mode else self.mode)
 
     def get_output(self):
-        mode = "House" if self.house_mode else self.mode
+        mode = self.actived_mode
         action_settings: SHP_PG_ActionSettings = self.action
         action = action_settings.get_current_action()
         path: str = self.output_template
         path = path.replace('{mode}', mode)
+
+        direction = action.direction
+        angle_text = action.angle_text
+        if self.direction_count == 1:
+            direction = self.direction
+            angle_text = self.angle_text
+
         if action:
-            path = path.replace('{direction}', f"{action.direction}")
-            path = path.replace('{direction_text}', f"{action.angle_text}")
+            path = path.replace('{direction}', f"{direction}")
+            path = path.replace('{direction_text}', f"{angle_text}")
             path = path.replace('{action}', f"{action.name}")
         return path
 
@@ -84,6 +86,7 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
         if context.scene.render.filepath == self.output:
             return
         context.scene.render.filepath = self.output
+
     output_template: bpy.props.StringProperty(
         name='Output', default='//{action}/{mode}/{direction}/', update=update_output)
 
@@ -92,15 +95,35 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
         action = action_settings.get_current_action()
         if action:
             action.update_direction(context)
+        else:
+            object_settings: SHP_PG_ObjectSettings = self.object
+            radians = math.radians(self.angle + 225) \
+                if self.fixed_direction or self.use_direction \
+                else 0
+            for item in object_settings.objects:
+                item: SHP_PG_Object
+                item.object.rotation_euler[2] = radians
+
+            # 这里可以安全地进行视图刷新或数据更新
+            for area in context.screen.areas:
+                if area.type == 'VIEW_3D':
+                    area.tag_redraw()
+
     reverse: bpy.props.BoolProperty(
         name='Reverse', description='反转方向（用于SHP载具）', update=update_direction)
     directions: bpy.props.IntProperty(
         name='方向数/8', min=0, default=1, update=update_direction)
 
     direction_count: bpy.props.IntProperty(
-        name='方向数量', get=get_direction_count)
+        name='方向数量', get=lambda self: max(self.directions * 8, 1))
     angle_per_direction: bpy.props.FloatProperty(
-        name='每方向角度', get=get_angle_per_direction)
+        name='每方向角度', get=lambda self: (360 / max(self.direction_count, 8)) * (-1 if self.reverse else 1))
+
+    direction: bpy.props.IntProperty(name='物体方向', update=update_direction)
+    angle: bpy.props.FloatProperty(
+        name='物体角度', get=lambda self: self.direction * self.angle_per_direction)
+    angle_text: bpy.props.StringProperty(
+        name='物体方向', get=lambda self: SHP_PG_GlobalSettings.calc_angle_text(self.direction_count, self.direction, self.reverse))
 
     @staticmethod
     def init_render_settings(
@@ -206,3 +229,22 @@ class SHP_PG_GlobalSettings(bpy.types.PropertyGroup):
             case 'Reset':
                 bpy.data.objects[f"Plane.grey.{suffix}"].hide_render = False
                 bpy.data.objects[f"Sun.{suffix}"].hide_render = False
+
+    @staticmethod
+    def calc_angle_text(direction_count: int, direction: int, reverse: bool = False):
+        direction_count = max(direction_count, 8)
+        index = direction % direction_count
+
+        if direction_count > 16:
+            return f'{index}'
+
+        if reverse and index != 0:
+            index = direction_count - index
+
+        if direction_count == 16:
+            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
+                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
+        else:
+            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
+
+        return signs[index]

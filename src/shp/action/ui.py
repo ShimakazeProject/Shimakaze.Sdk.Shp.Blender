@@ -34,8 +34,13 @@ class SHP_PT_Action(bpy.types.Panel):
     bl_order = 2
 
     def draw(self, context):
+        from .. import SHP_PG_GlobalSettings
         layout = self.layout
-        action_settings = SHP_PG_ActionSettings.get_instance()
+        settings: SHP_PG_GlobalSettings = SHP_PG_GlobalSettings.get_instance()
+        if not settings:
+            return
+
+        action_settings: SHP_PG_ActionSettings = settings.action
         if not action_settings:
             return
 
@@ -50,8 +55,7 @@ class SHP_PT_Action(bpy.types.Panel):
         col.operator(SHP_OT_Action_Add.bl_idname, icon='ADD', text='')
         col.operator(SHP_OT_Action_Remove.bl_idname, icon='REMOVE', text='')
 
-        data = action_settings.get_current_action()
-        if data:
+        if settings.direction_count != 1 and (data := action_settings.get_current_action()):
             col = layout.column(align=True)
             col.prop(data, 'fixed_direction')
             row = col.row().split(factor=0.9)

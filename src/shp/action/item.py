@@ -17,9 +17,6 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
         if frame:
             marker.frame = frame
 
-    def get_end_name(self):
-        return f"{self.name}_End"
-
     def update_name(self, context: bpy.types.Context):
         old_name = self.name
         new_name = self.name_buf
@@ -49,37 +46,34 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
     def get_angle(self):
         from ..settings import SHP_PG_GlobalSettings
         settings = SHP_PG_GlobalSettings.get_instance()
+        if settings.direction_count == 1:
+            return settings.angle
+
         return self.direction * settings.angle_per_direction
 
     def get_angle_text(self):
         from ..settings import SHP_PG_GlobalSettings
         settings = SHP_PG_GlobalSettings.get_instance()
-        index = self.direction % settings.direction_count
+        if settings.direction_count == 1:
+            return settings.angle_text
 
-        if settings.direction_count > 16:
-            return f'{index}'
-
-        if settings.reverse and index != 0:
-            index = settings.direction_count - index
-
-        if settings.direction_count == 16:
-            signs = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW',
-                     'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE']
-        else:
-            signs = ['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE']
-
-        return signs[index]
+        return SHP_PG_GlobalSettings.calc_angle_text(
+            settings.direction_count,
+            self.direction,
+            settings.reverse,
+        )
 
     def update_direction(self, context: bpy.types.Context):
         from ..object import SHP_PG_ObjectSettings, SHP_PG_Object
         from ..settings import SHP_PG_GlobalSettings
-        object_settings = SHP_PG_ObjectSettings.get_instance()
         settings = SHP_PG_GlobalSettings.get_instance()
+        object_settings: SHP_PG_ObjectSettings = settings.object
         settings.update_output(context)
 
-        radians = math.radians(self.angle + 225) \
-            if self.fixed_direction or self.use_direction \
-            else 0
+        radians = 0
+        if settings.direction_count == 1 or self.fixed_direction or self.use_direction:
+            radians = math.radians(self.angle + 225)
+
         for item in object_settings.objects:
             item: SHP_PG_Object
             item.object.rotation_euler[2] = radians
@@ -91,7 +85,7 @@ class SHP_PG_Action(bpy.types.PropertyGroup):
 
     name_buf: bpy.props.StringProperty(
         name='Name', update=update_name)
-    end_name: bpy.props.StringProperty(get=get_end_name)
+    end_name: bpy.props.StringProperty(get=lambda self: f"{self.name}_End")
     start: bpy.props.IntProperty(name="Start", update=update_start)
     end: bpy.props.IntProperty(name="End", update=update_end)
 

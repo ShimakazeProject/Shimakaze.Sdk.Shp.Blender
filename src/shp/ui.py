@@ -24,6 +24,13 @@ class SHP_PT_GlobalSettings(bpy.types.Panel):
         row = col.row(align=True)
         row.prop(settings, 'reverse')
         row.prop(settings, 'directions')
+
+        if settings.direction_count == 1:
+            row = col.row().split(factor=0.9)
+            row.prop(settings, 'direction')
+            row.label(text=settings.angle_text)
+            col.prop(settings, 'angle')
+
         col.label(
             text=f"{settings.angle_per_direction}°/direction * {settings.direction_count} diretions")
 
